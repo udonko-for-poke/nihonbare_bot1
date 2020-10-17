@@ -22,9 +22,9 @@ vc_state = 0
 # 例外設定
 NOT_MENTION = [699547606728048700]
 
-TOKEN_PATH = '' + os.path.dirname(os.path.abspath(__file__)) + '\\Data\\BotID.txt'
-STOCK_PATH = '' + os.path.dirname(os.path.abspath(__file__)) + '\\Data\\Stock.txt'
-CMD_PATH = '' + os.path.dirname(os.path.abspath(__file__)) + '\\Data\\cmd.txt'
+TOKEN_PATH = '' + os.path.dirname(os.path.abspath(__file__)) + '/Data/BotID.txt'
+STOCK_PATH = '' + os.path.dirname(os.path.abspath(__file__)) + '/Data/Stock.txt'
+CMD_PATH = '' + os.path.dirname(os.path.abspath(__file__)) + '/Data/cmd.txt'
 
 with open(TOKEN_PATH, "r",encoding="utf-8_sig") as f:
     l = f.readlines()
