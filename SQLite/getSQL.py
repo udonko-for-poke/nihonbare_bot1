@@ -27,7 +27,7 @@ def makestate(list_, lv):
     return txt[:-1]
 
 async def getstatus(type_, arg, isreal):
-    fpath = os.path.dirname(__file__)+'\\sqldata\\pokemon.sqlite3'
+    fpath = os.path.dirname(__file__)+'/sqldata/pokemon.sqlite3'
     poke_content = sqlite3.connect(fpath)
     c = poke_content.cursor()
     flg = 0
@@ -50,7 +50,7 @@ async def getstatus(type_, arg, isreal):
     return (-1), ''
     
 async def sqlrequest(txt, tpl):
-    fpath = os.path.dirname(__file__)+'\\sqldata\\pokemon.sqlite3'
+    fpath = os.path.dirname(__file__)+'/sqldata/pokemon.sqlite3'
     poke_content = sqlite3.connect(fpath)
     c = poke_content.cursor()
     c.execute(txt, tpl)
@@ -62,19 +62,12 @@ async def sqlrequest(txt, tpl):
     for element in list1:
         txt_2 += str(element) + ','
     cnt += len(txt_2[:-1])
-#    print(cnt)
     for hit in c.fetchall():
         txt_2 += '\n'
-#        print(hit)
         for element in hit:
             txt_2 += str(element) + ','
-#            print(str(element))
             cnt += len(str(element))
         txt_2 = txt_2[:-1]
-#        print(cnt)
     poke_content.commit()
     poke_content.close()
     return txt_2, cnt
-    
-if __name__ == '__main__':
-    getstatus('name', 'ヒバニー')
