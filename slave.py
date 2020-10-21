@@ -242,9 +242,16 @@ async def showsql(ctx, *arg):
         return
     with open(SQLCMD_PATH, 'rb') as f:
         sql_dict = pickle.load(f)
+
     text = ''
-    for cmds in sql_dict:
-        text += '\n　・' + cmds + '\n　' + sql_dict[cmds][1]
+    if (len(arg) == 0):
+        for cmds in sql_dict:
+            text += '\n　・' + cmds + '\n　' + sql_dict[cmds][1]
+    else:
+        for cmds in arg:
+            if (cmds in sql_dict):
+                text += '\n　・' + cmds + '\n　' + sql_dict[cmds][1]
+        
     await ctx.send(f'{ctx.author.mention} '+text)
     return
 
