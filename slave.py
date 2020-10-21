@@ -9,6 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'Functions'))
 sys.path.append(os.path.join(os.path.dirname(__file__), 'SQLite'))
 import rolls
 import vc
+import calc
 import raid as raidcommands
 
 SERVERID = 696651369221718077
@@ -196,6 +197,30 @@ async def st(ctx, *arg1):
         await ctx.send(f'{ctx.author.mention} \n'+result[1])
     else:
         await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
+    return
+
+@bot.command()
+async def korippo(ctx, poke):
+    import getSQL
+    poke = jaconv.hira2kata(poke).replace('２', '2')
+    print('korippo->'+poke)
+    cmd = 'select CAST(0.6*(H*2+31)+70 AS INT) from pokemon WHERE name = ?'
+    tpl = (poke,)
+    result = await getSQL.sqlrequest(cmd, tpl)
+    if (result[1]==-1):
+        await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
+        return
+    HP = int(result[0])
+    cmd = 'select get from pokemon WHERE name = ?'
+    result = await getSQL.sqlrequest(cmd, tpl)
+    GET = int(result[0])
+    B   = calc.get_B(HP, GET)
+    if (B>=255):
+        await ctx.send(f'{ctx.author.mention} ∞(/コオリッポ)です')
+        return
+    G = calc.get_G(B)
+    value = (G/49806)**4
+    await ctx.send(f'{ctx.author.mention} '+str(round(value,2))+'(/コオリッポ)です')
     return
 
 # 新規SQL文の登録
