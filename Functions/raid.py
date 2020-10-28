@@ -40,3 +40,16 @@ async def process_raid_check(ctx, arg, l_poke):
     else:
         await ctx.send(f'{ctx.author.mention}'+'\n' + str(arg) + 'レイドのデータはありません')
     return
+
+
+async def process_raid_del(ctx, name, STOCK_PATH, l_poke):
+    print('del:' + name)
+    if (name in l_poke):
+        l_poke.remove(name)
+        with open(STOCK_PATH, 'w',encoding="utf-8_sig") as f:
+            for x in l_poke:
+                f.write(str(x) + "\n")
+        await ctx.send(f'{ctx.author.mention}'+'\n' + str(name) + 'レイドを削除しました')
+    else:
+        await ctx.send(f'{ctx.author.mention}'+'\n' + str(name) + 'レイドが見つかりませんでした')
+    return
