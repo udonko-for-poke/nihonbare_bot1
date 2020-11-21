@@ -58,6 +58,9 @@ class JapaneseHelpCommand(commands.DefaultHelpCommand):
 
 bot = commands.Bot(command_prefix='!', help_command=JapaneseHelpCommand())
 
+def is_me(m):
+    return m.author == bot.user
+
 # bot起動時に"login"と表示
 @bot.event
 async def on_ready():
@@ -159,16 +162,20 @@ async def card(ctx, *arg):
     c_flg = 0   #ポケモン名が一致しなかった場合にTrueになる
     candidate = ''  #一致しないポケモンの候補
     for poke in pokes:
-        result2 = await getSQL.poke2num(poke)
-        if (result2 == ''):
-            result = await getSQL.inname(poke)
-            if (result[1] == -1 or result[1] >= 10):
-                pass
-            else:
-                candidate += result[0] + '\n'
-                c_flg = 1
-            continue
-        numbers.append(result2 + '.gif')
+        if (poke == 'null'):
+            numbers.append('NULL')
+        else:
+            result2 = await getSQL.poke2num(poke)
+            if (result2 == ''):
+            
+                result = await getSQL.inname(poke)
+                if (result[1] == -1 or result[1] >= 10):
+                    pass
+                else:
+                    candidate += result[0] + '\n'
+                    c_flg = 1
+                continue
+            numbers.append(result2 + '.gif')
     
     base_url = 'https://78npc3br.user.webaccel.jp/poke/icon96/n'
     
@@ -179,13 +186,16 @@ async def card(ctx, *arg):
 
     i = 0       
     for no in numbers:
-        result3 = await image_.dl(base_url + no, IMG_PATH + no)
-        #IDを使ってDL
-        if (result3):
-            poke_im = Image.open(IMG_PATH+no)
-            img_clear.paste(poke_im, ((i%3)*100+75, (i//3)*100+25))
+        if (no != 'NULL'):
+            result3 = await image_.dl(base_url + no, IMG_PATH + no)
+            #IDを使ってDL
+            if (result3):
+                poke_im = Image.open(IMG_PATH+no)
+                img_clear.paste(poke_im, ((i%3)*100+75, (i//3)*100+25))
+                i += 1
+                del(poke_im)
+        else:
             i += 1
-            del(poke_im)
                     
     im.paste(img_clear, mask=img_clear.split()[3])
     im1 = Image.open(IMG_PATH+'user.png')
@@ -206,12 +216,17 @@ async def card(ctx, *arg):
     numbers.append('user.png')
     file_img = discord.File(IMG_PATH+'out.jpg')
     
+    await ctx.message.delete()
     await ctx.send(file=file_img)
+    
     if(c_flg):
         embed = discord.Embed(title="もしかして",description=candidate)
         await ctx.send(f'{ctx.author.mention} ', embed=embed)
     del(im1)
     del(file_img)
+    if ('NULL' in numbers):
+        numbers = numbers.remove('NULL')
+    numbers = list(set(numbers))
     for f in numbers:
         os.remove(IMG_PATH+f)
         
@@ -425,7 +440,7 @@ async def on_message(message):
             await sqlreq(message, arg1, argtpl)
             return
             
-    elif(message.content.startswith('!editsql ')):
+    elif(message.content.startswith('!editsql ') or message.content.startswith('!editsql　')):
         if os.path.getsize(SQLCMD_PATH) <= 0:
             await message.channel.send(f'{message.author.mention} エラー1：コマンドが見つかりません')
             return
@@ -469,14 +484,16 @@ async def on_message(message):
         flg = 0
         for i in mes:
             if (flg == 0):
-                if(i==' '):
+                if(i==' ' or i == '　'):
                     flg = 1
                 else:
                     cmd += i
             else:
                 args += i
         cmd = cmd[1:]
-        arglist = args.split()
+        arglist = re.split('[ 　]',args)
+        if(len(arglist) == 1 and arglist[0] == ''):
+            arglist = []
         with open(SQLCMD_PATH, 'rb') as f:
             sql_dict = pickle.load(f)
         
@@ -492,6 +509,15 @@ async def on_message(message):
     else:
         await bot.process_commands(message)
 
+@bot.event
+async def on_raw_reaction_add(payload):
+    if (payload.emoji.name == '8jyomei'):
+        channel = bot.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        if (is_me(message)):
+            await message.delete()
+            print(payload.member.name + ' has deleted bot comment')
+        
 ################################
 #VC
 ################################
