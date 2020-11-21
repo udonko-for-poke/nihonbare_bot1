@@ -29,7 +29,7 @@ async def move_member(member, before, after, SERVERID, NOT_MENTION):
         txt += 'None → '
     # ボイスチャンネルに参加してきた場合
     if after.channel is not None:
-        txt += str(before.channel)
+        txt += str(after.channel)
         flg = 0
         for x in NOT_MENTION:
             if (after.channel.id == x):
