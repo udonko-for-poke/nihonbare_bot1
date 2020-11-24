@@ -68,6 +68,20 @@ async def on_ready():
     await bot.change_presence(activity=activity)
     print('login\n')
 
+@bot.event
+async def on_command_error(ctx, error):
+    print(type(error))
+    if isinstance(error, commands.errors.MissingRequiredArgument):
+        await ctx.send(f'{ctx.author.mention}エラー：引数の数が不正です')
+        return
+
+    if isinstance(error, commands.errors.CommandNotFound):
+        await ctx.send(f'{ctx.author.mention}エラー：コマンドが見つかりません')
+        return
+
+    # If nothing is caught, reraise the error so that it goes to console.
+    raise error
+
 class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
         super().__init__()
@@ -315,6 +329,40 @@ class __Status(commands.Cog, name = '数値確認'):
         G = calc.get_G(B)
         value = (G/49806)**4
         await ctx.send(f'{ctx.author.mention} '+str(round(value,2))+'(/コオリッポ)です')
+        return
+
+    @commands.command()
+    async def calciv(self, ctx, poke, lv, *args):
+        """個体値チェック"""
+        print('calciv'+poke)
+        st_list, check_list = [], []
+        #引数の中に個体値チェックの箇所指定があるかどうかの確認
+        for x in args:
+            try:
+                st_list.append(int(x))
+            except ValueError:
+                txt = x.upper()
+                if (re.fullmatch(r'[A-DHS]', txt)):
+                        check_list.append(txt)
+        if (not check_list):
+            check_list = ['H', 'A', 'B', 'C', 'D', 'S']
+        #求めたい個体値箇所と数値数が一致するかの確認
+        if (len(st_list) != len(check_list)):
+            await ctx.send(f'{ctx.author.mention}エラー：引数の数が不正です')
+        #個体値確認箇所にHPが含まれているかの確認
+        else:
+            if ('H' not in check_list):
+                check_h = -1
+            else:
+                check_h = check_list.index('H')
+                
+            from SQLite import getSQL
+            txt = 'SELECT ' +  ','.join(check_list) + ' FROM pokemon WHERE name = ?'
+            result = await getSQL.getivs(poke, txt, lv, st_list, check_h)
+            if (not result):
+                await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
+            else:
+                await ctx.send(f'{ctx.author.mention}\n' + result)
         return
 
 class __SQL(commands.Cog, name = 'SQL'):
