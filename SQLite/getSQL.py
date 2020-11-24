@@ -95,16 +95,12 @@ async def sqlrequest(txt, tpl):
         txt_2 += str(element) + ','
     txt_2 = txt_2[:-1]
     cnt += len(txt_2)
-#    print(cnt)
     for hit in c.fetchall():
         txt_2 += '\n'
-#        print(hit)
         for element in hit:
             txt_2 += str(element) + ','
-#            print(str(element))
             cnt += len(str(element))
         txt_2 = txt_2[:-1]
-#        print(cnt)
     poke_content.commit()
     poke_content.close()
     return txt_2, cnt
@@ -166,3 +162,39 @@ async def inname(name):
     poke_content.commit()
     poke_content.close()
     return txt_2, cnt
+
+async def getivs(poke, txt, lv, list_, check_h):
+    fpath = os.path.dirname(__file__)+'/sqldata/pokemon.sqlite3'
+    poke_content = sqlite3.connect(fpath)
+    c = poke_content.cursor()
+    tpl = (poke,)
+    c.execute(txt, tpl)
+    list1 = c.fetchone()
+    poke_content.commit()
+    poke_content.close()
+
+    if (list1 == None):
+        return ''
+    else: 
+        import math
+        ivs = ''
+        for j in range(len(list1)):
+            pos_list = []
+            if (j == check_h):
+                for i in range(32):
+                    if ((math.floor((int(list1[j])*2 + i)*int(lv)/100) +int(lv)+10) == int(list_[j])):
+                        pos_list.append(i)
+                        check_h = False
+            else:
+                for i in range(32):
+                    if ((math.floor((int(list1[j])*2 + i)*int(lv)/100.0)+5) == int(list_[j])):
+                        pos_list.append(i)
+            if (pos_list):
+                if (len(pos_list) != 1):
+                    txt = str(pos_list[0]) + '~' + str(pos_list[-1])
+                else:
+                    txt = str(pos_list[0])
+            else:
+                txt = 'あほしね'
+            ivs += (txt + ' - ')
+    return ivs[:-3]
