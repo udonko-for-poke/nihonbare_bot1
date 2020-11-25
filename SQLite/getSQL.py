@@ -163,7 +163,9 @@ async def inname(name):
     poke_content.close()
     return txt_2, cnt
 
-async def getivs(poke, txt, lv, list_, check_h):
+############################################## 性格補正対応用の引数の追加
+async def getiv(poke, txt, lv, list_, check_h, rise=-1, down=-1):
+##############################################
     fpath = os.path.dirname(__file__)+'/sqldata/pokemon.sqlite3'
     poke_content = sqlite3.connect(fpath)
     c = poke_content.cursor()
@@ -175,26 +177,44 @@ async def getivs(poke, txt, lv, list_, check_h):
 
     if (list1 == None):
         return ''
+############################################## 以下変更追加部
     else: 
-        import math
         ivs = ''
-        for j in range(len(list1)):
-            pos_list = []
-            if (j == check_h):
-                for i in range(32):
-                    if ((math.floor((int(list1[j])*2 + i)*int(lv)/100) +int(lv)+10) == int(list_[j])):
-                        pos_list.append(i)
-                        check_h = False
-            else:
-                for i in range(32):
-                    if ((math.floor((int(list1[j])*2 + i)*int(lv)/100.0)+5) == int(list_[j])):
-                        pos_list.append(i)
-            if (pos_list):
-                if (len(pos_list) != 1):
-                    txt = str(pos_list[0]) + '~' + str(pos_list[-1])
-                else:
-                    txt = str(pos_list[0])
-            else:
-                txt = 'あほしね'
-            ivs += (txt + ' - ')
+        nature = [1.0]*len(list_)
+        if (rise != -1):
+            nature[rise] = 1.1
+        if (down != -1):
+            nature[down] = 0.9
+        for (i, n) in zip(range(len(list_)), nature):
+            val = makeiv(int(list1[i]), list_[i], int(lv), n,(i==check_h))
+            ivs += (val + ' - ')            
     return ivs[:-3]
+
+
+def makeiv(base, r_st, lv, nature, is_H):
+    """実数値から取り得る個体値を計算"""
+    import math
+    if is_H:
+        iv_min = math.ceil((r_st-lv-10)*(100/lv))-base*2
+        iv_max = rdown_sub((r_st-lv-10+1)*(100/lv))-base*2
+    else:
+        iv_min = math.ceil((math.ceil(r_st/nature)-5)*(100/lv))-base*2
+        iv_max = rdown_sub((math.ceil(r_st/nature)-5+1)*(100/lv))-base*2
+    if (iv_max < 0 or iv_min > 31):
+        return 'あほしね'
+    else:
+        if (iv_min < 0):
+            iv_min = 0
+        if (iv_max > 31):
+            iv_max = 31
+        if (iv_min == iv_max):
+            return str(iv_min)
+        else:
+            return str(iv_min) + '～' + str(iv_max)
+
+def rdown_sub(num):
+    """num が整数値なら-1、小数値なら切り捨て"""
+    if num.is_integer():
+        return (int(num) - 1)
+    else:
+        return int(num)
