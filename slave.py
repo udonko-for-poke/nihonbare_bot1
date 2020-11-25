@@ -334,34 +334,44 @@ class __Status(commands.Cog, name = '数値確認'):
     @commands.command()
     async def calciv(self, ctx, poke, lv, *args):
         """個体値チェック"""
-        print('calciv'+poke)
         st_list, check_list = [], []
+        ########################################　性格補正対応、及びインデントなし箇所指定への対応
+        rise, down = -1, -1
         #引数の中に個体値チェックの箇所指定があるかどうかの確認
         for x in args:
-            try:
+            if (re.fullmatch(r'[0-9]*|[0-9]*(\+|-)', x)):
+                if x[-1] == '+':
+                    x = x[:-1]
+                    rise = len(st_list)
+                if x[-1] == '-':
+                    x = x[:-1]
+                    down = len(st_list)
                 st_list.append(int(x))
-            except ValueError:
-                txt = x.upper()
-                if (re.fullmatch(r'[A-DHS]', txt)):
-                        check_list.append(txt)
+            if (re.fullmatch(r'[A-DHS]*', x, flags=re.IGNORECASE)):
+                for el in x:
+                    check_list.append(el.upper())
+        ########################################
         if (not check_list):
             check_list = ['H', 'A', 'B', 'C', 'D', 'S']
         #求めたい個体値箇所と数値数が一致するかの確認
         if (len(st_list) != len(check_list)):
-            await ctx.send(f'{ctx.author.mention}エラー：引数の数が不正です')
+                await ctx.send(f'{ctx.author.mention}エラー：引数の数が不正です')
         #個体値確認箇所にHPが含まれているかの確認
         else:
             if ('H' not in check_list):
                 check_h = -1
             else:
                 check_h = check_list.index('H')
-                
+
             from SQLite import getSQL
             txt = 'SELECT ' +  ','.join(check_list) + ' FROM pokemon WHERE name = ?'
-            result = await getSQL.getivs(poke, txt, lv, st_list, check_h)
+            ################################## 性格補正対応用の引数の追加
+            result = await getSQL.getiv(poke, txt, lv, st_list, check_h, rise, down)
+            ##############################################
             if (not result):
                 await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
             else:
+                print('calciv:'+poke)
                 await ctx.send(f'{ctx.author.mention}\n' + result)
         return
 
