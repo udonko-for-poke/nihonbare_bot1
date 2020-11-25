@@ -68,6 +68,7 @@ async def on_ready():
     await bot.change_presence(activity=activity)
     print('login\n')
 
+#コマンドに関するエラー
 @bot.event
 async def on_command_error(ctx, error):
     print(type(error))
@@ -78,7 +79,6 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandNotFound):
         await ctx.send(f'{ctx.author.mention}エラー：コマンドが見つかりません')
         return
-
     # If nothing is caught, reraise the error so that it goes to console.
     raise error
 
@@ -393,7 +393,8 @@ class __SQL(commands.Cog, name = 'SQL'):
         for i in range(len(arg)-1):
            text += arg[i+1] + ' '
         
-        if (text.startswith('select') or text.startswith('SELECT')):
+        text_head = text[1:6].lower()
+        if (text_head == 'select'):
             pass
         else:
             await ctx.send(f'{ctx.author.mention} エラー：コマンドが不適切です')
@@ -474,7 +475,8 @@ async def sqlreq(message, cmd, argtpl):
 ##  改行を伴うコマンドの受け付け
 @bot.event
 async def on_message(message):
-    if message.content.startswith('!sql SELECT') or message.content.startswith('!sql select'):
+    head = message.content[:11].lower()
+    if head == '!sql select':
         if (message.channel.id != FOR_BOT and message.channel.guild.id != MY_SERVER and message.channel.guild.id != MY_SERVER2):
             return
         with message.channel.typing():
