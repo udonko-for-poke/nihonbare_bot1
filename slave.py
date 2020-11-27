@@ -9,10 +9,12 @@ import cmd_raid
 import cmd_card
 import cmd_status
 import cmd_sql
-sys.path.append(os.path.join(os.path.dirname(__file__), 'Commands/Functions'))
+import cmd_home
 import vc
 
 SERVERID = 696651369221718077       #鯖ID
+SLAVE_ID = 723507961816678420       #役職：レイドの奴隷のID
+CALL_ID  = 753655891114590348       #役職：通話通知のID
 CALL_CHANNEL = 753655481322569808   #通話通知を飛ばすチャンネルのID
 FOR_BOT  = 765392422829162556       #SQL文の実行を許可するチャンネル
 MY_SERVER = 539750441479831573      #実験用鯖1
@@ -73,6 +75,7 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandNotFound):
         await ctx.send(f'{ctx.author.mention}エラー：コマンドが見つかりません')
         return
+    print(error)
     raise error
 
 #botが自分自身を区別するための関数
@@ -86,16 +89,16 @@ class __Roles(commands.Cog, name = '役職の管理'):
         
     @commands.command()
     # 役職の付与
-    async def add(self, ctx, arg):
+    async def add(self, ctx, role):
         """役職を付与：slave->レイドの奴隷、call->通話通知"""
-        await cmd_roles.add(ctx, arg)
+        await cmd_roles.add(ctx, role)
         return
         
     # 役職の解除
     @commands.command()
-    async def rm(self, ctx, arg):
+    async def rm(self, ctx, role):
         """役職を解除"""
-        await cmd_roles.rm(ctx, arg)
+        await cmd_roles.rm(ctx, role)
         return
 
 class __Raid(commands.Cog, name = 'レイド関連'):
@@ -105,36 +108,36 @@ class __Raid(commands.Cog, name = 'レイド関連'):
 
     # 在庫の確認
     @commands.command()
-    async def check(self, ctx, arg):
+    async def check(self, ctx, poke):
         """レイドが開催済みかどうかを検索"""
         global l_poke
-        await cmd_raid.process_raid_check(ctx, arg, l_poke)
+        await cmd_raid.process_raid_check(ctx, poke, l_poke)
         
     @commands.command()
-    async def store(self, ctx, arg):
+    async def store(self, ctx, poke):
         """開催済みレイドの追加"""
         global l_poke
-        l_poke = await cmd_raid.process_raid_add(ctx, arg, STOCK_PATH, l_poke)        
+        l_poke = await cmd_raid.process_raid_add(ctx, poke, STOCK_PATH, l_poke)        
 
     @commands.command()
-    async def raid(self, ctx, arg1, arg2):
+    async def raid(self, ctx, cmd, poke):
         """レイド関連のコマンド：add->store, check, del:削除（HOSTのみ使用可)"""
         global l_poke
-        if (arg1 == 'add'):
-            l_poke = await cmd_raid.process_raid_add(ctx, arg2, STOCK_PATH, l_poke)
+        if (cmd == 'add'):
+            l_poke = await cmd_raid.process_raid_add(ctx, poke, STOCK_PATH, l_poke)
             return
-        if (arg1 == 'check'):
-            await cmd_raid.process_raid_check(ctx, arg2, l_poke)
+        if (cmd == 'check'):
+            await cmd_raid.process_raid_check(ctx, poke, l_poke)
             return
-        if (arg1 == 'del'):
-            l_poke = await cmd_raid.process_raid_del(ctx, arg2, STOCK_PATH, l_poke)
+        if (cmd == 'del'):
+            l_poke = await cmd_raid.process_raid_del(ctx, poke, STOCK_PATH, l_poke)
             return
         return
 
 @bot.command()
-async def card(ctx, *arg):
+async def card(ctx, *pokes):
     """簡易な構築の画像を生成"""
-    await cmd_card.makecard(ctx, arg, IMG_PATH)
+    await cmd_card.makecard(ctx, pokes, IMG_PATH)
     return
         
 #################################
@@ -146,9 +149,9 @@ class __Status(commands.Cog, name = '数値確認'):
         self.bot = bot
     ##  種族値、実数値の表示
     @commands.command()
-    async def st(self, ctx, *arg):
+    async def st(self, ctx, *pokedata):
         """種族値の表示，数値を書くと該当Lvでの実数値を表示"""
-        await cmd_status.st(ctx, arg)
+        await cmd_status.st(ctx, pokedata)
         return
 
     @commands.command()
@@ -169,21 +172,71 @@ class __SQL(commands.Cog, name = 'SQL'):
         self.bot = bot
 
     @commands.command()
-    async def addsql(self, ctx, *arg):
+    async def addsql(self, ctx, *cmd_SQL):
         """新規SQL文の登録"""
-        await cmd_sql.addsql(ctx, arg, SQLCMD_PATH)
+        await cmd_sql.addsql(ctx, cmd_SQL, SQLCMD_PATH)
         return
       
     @commands.command()
-    async def showsql(self, ctx, *arg):
+    async def showsql(self, ctx, *cmd_SQL):
         """登録済みSQL文の表示"""
-        await cmd_sql.showsql(ctx, arg, SQLCMD_PATH)
+        await cmd_sql.showsql(ctx, cmd_SQL, SQLCMD_PATH)
         return
 
     @commands.command()
     async def delsql(self, ctx, cmd):
         """登録済みSQL文の削除"""
         await cmd_sql.delsql(ctx, cmd, SQLCMD_PATH)
+        return
+
+class __Home(commands.Cog, name = 'Home'):
+    def __init__(self, bot):
+        super().__init__()
+        self.bot = bot
+
+    def getbattlerule(self, args):
+        print((args))
+        battlerule = 1
+        if (len(args) == 2):
+            rate = args[1]
+            if (args[0] == '2' or args[0] == '1'):
+                battlerule = int(args[0])
+            else:
+                return -1, None
+        elif (len(args) == 1):
+            rate = args[0]
+        else:
+            return -1, None
+        try:
+            intrate = int(rate)
+        except:
+            return -1, None
+        return intrate, battlerule
+        
+    async def printerror(self, ctx):
+        await ctx.send(f'{ctx.author.mention} 引数が間違っています')
+        return
+    
+    @commands.command()
+    async def rank(self, ctx, *battlerule_rate):
+        """レートに対応する順位を求める"""
+        rate, battlerule = self.getbattlerule(battlerule_rate)
+        if (rate == -1):
+            await self.printerror(ctx)
+            return
+        print('rank:'+str(rate))
+        await cmd_home.get_rank(ctx, rate, battlerule)
+        return
+
+    @commands.command()
+    async def rate(self, ctx, *battlerule_rank):
+        """順位に対応するレートを求める"""
+        rank, battlerule = self.getbattlerule(battlerule_rank)
+        if (rank == -1):
+            await self.printerror(ctx)
+            return
+        print('rate:'+str(rank))
+        await cmd_home.get_rate(ctx, rank, battlerule)
         return
 
 ##  改行を伴うコマンドの受け付け
@@ -232,4 +285,5 @@ bot.add_cog(__Roles(bot=bot))
 bot.add_cog(__Raid(bot=bot))
 bot.add_cog(__Status(bot=bot))
 bot.add_cog(__SQL(bot=bot))
+bot.add_cog(__Home(bot=bot))
 bot.run(TOKEN)
