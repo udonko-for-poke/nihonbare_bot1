@@ -8,6 +8,7 @@ def calc_seasonid(season, battle_rule):
 def ranking_search(_list, value_):
     length = len(_list)
     value = value_*1000
+    print(str(_list[0])+':'+str(_list[length-1]))
     if (_list[0] < value):
         return 0
     if (_list[length-1] > value):
@@ -17,7 +18,7 @@ def ranking_search(_list, value_):
         rank = ranking_search(_list[:length//2], value_)
     else:
         rank = (length//2)+ranking_search(_list[length//2:], value_)
-    return rank+1
+    return rank
 
 async def create_request(battle_rule):
     url = 'https://api.battle.pokemon-home.com/cbd/competition/rankmatch/list'
@@ -57,6 +58,7 @@ async def get_trainer(ts, rst, season_id):
     except urllib.error.URLError as e:
         print(e)
     rate = []
+#    print(body)
     for r in body:
         rate.append(int(r['rating_value']))
     return rate
@@ -64,7 +66,7 @@ async def get_trainer(ts, rst, season_id):
 async def get_rank(ctx, rate, battle_rule):
     ts, rst, season_id = await create_request(battle_rule)
     ranking_list = await get_trainer(ts[0], rst, season_id)
-    rank = ranking_search(ranking_list, rate)
+    rank = ranking_search(ranking_list, rate)+1
     await ctx.send(f'{ctx.author.mention} '+str(rank)+'位です')
     return
 
