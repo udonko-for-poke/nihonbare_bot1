@@ -251,13 +251,30 @@ class __Home(commands.Cog, name = 'Home'):
             for i in range(argnum):
                 rate.append(args[i])
         else:
-            return [-1], None
+            return [-2], None
         try:
             intrate = [int(i) for i in rate]
         except:
-            return [-1], None
+            return [-3], None
         return intrate, battlerule
         
+    def getbattlerulestr(self, args, argnum):
+        battlerule = 1
+        s = []
+        if (len(args) == argnum+1):
+            for i in range(argnum):
+                s.append(args[i+1])
+            if (args[0] == '2' or args[0] == '1'):
+                battlerule = int(args[0])
+            else:
+                return [-1], None
+        elif (len(args) == argnum):
+            for i in range(argnum):
+                s.append(args[i])
+        else:
+            return [-2], None
+        return s, battlerule
+    
     async def printerror(self, ctx):
         await ctx.send(f'{ctx.author.mention} 引数が間違っています')
         return
@@ -308,6 +325,21 @@ class __Home(commands.Cog, name = 'Home'):
         await send_message(ctx.send, '', '('+update_time+')')
         return
 
+    @commands.command()
+    async def pokeinfo(self, ctx, *battle_rule_pokename):
+        """ホームのポケモンの情報を求める"""
+        name, battlerule = self.getbattlerulestr(battle_rule_pokename, 1)
+        print('pokeinfo:'+str(name))
+        if (battlerule == None):
+            await self.printerror(ctx)
+            return
+        res, update_time = await cmd_home.pokeinfo(ctx, name[0], battlerule)
+        if (len(res) <= 0):
+            await send_message(ctx.send, ctx.author.mention, 'No data('+update_time+')')
+            return
+        print(update_time)
+        await send_message(ctx.send, '', '('+update_time+')')
+        return
 ##  改行を伴うコマンドの受け付け
 @bot.event
 async def on_message(message):
