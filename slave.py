@@ -10,18 +10,20 @@ import cmd_card
 import cmd_status
 import cmd_sql
 import cmd_home
+import cmd_system
 import vc
 
-SERVERID = 696651369221718077       #鯖ID
-SLAVE_ID = 723507961816678420       #役職：レイドの奴隷のID
-CALL_ID  = 753655891114590348       #役職：通話通知のID
-CALL_CHANNEL = 753655481322569808   #通話通知を飛ばすチャンネルのID
-FOR_BOT  = 765392422829162556       #SQL文の実行を許可するチャンネル
-MY_SERVER = 539750441479831573      #実験用鯖1
-MY_SERVER2= 723833856871891004      #実験用鯖2
-HOST_ROLE = 696655902438326292      #役職：HOSTのID
-vc_state = 0                        #ボイスチャンネルにいる人の数を0で初期化
-NOT_MENTION = [699547606728048700]  #通話が始まっても通知しないチャンネル
+SERVERID     = 696651369221718077       #鯖ID
+SLAVE_ID     = 723507961816678420       #役職：レイドの奴隷のID
+CALL_ID      = 753655891114590348       #役職：通話通知のID
+CALL_CHANNEL = 753655481322569808       #通話通知を飛ばすチャンネルのID
+FOR_BOT      = 765392422829162556       #SQL文の実行を許可するチャンネル
+BKP_CHANNEL  = 782065499696922634       #バックアップを送るチャンネル
+MY_SERVER    = 539750441479831573       #実験用鯖1
+MY_SERVER2   = 723833856871891004       #実験用鯖2
+HOST_ROLE    = 696655902438326292       #役職：HOSTのID
+vc_state     = 0                        #ボイスチャンネルにいる人の数を0で初期化
+NOT_MENTION  = [699547606728048700]     #通話が始まっても通知しないチャンネル
 
 MAINPATH   = os.path.dirname(os.path.abspath(__file__)) #このファイルの位置
 TOKEN_PATH = '' + MAINPATH + '/Data/BotID.txt'          #TOKENが保存されているファイル
@@ -140,6 +142,23 @@ async def card(ctx, *pokes):
     await cmd_card.makecard(ctx, pokes, IMG_PATH)
     return
         
+@bot.command()
+async def bkp(ctx):
+    """botのデータのバックアップを取る"""
+    if (ctx.message.author.top_role.id != HOST_ROLE):
+        await ctx.send(f'{ctx.author.mention} 権限が足りません')
+        return
+    global MAINPATH
+    channel  = bot.get_channel(BKP_CHANNEL)
+    filelist = ['Stock.txt', 'cmdsql.pickle']
+    result = await cmd_system.bkp(channel.send, filelist, MAINPATH+'/Data')
+    if (result):
+        mes = 'バックアップを取りました'
+    else:
+        mes = 'バックアップに失敗しました'
+    await ctx.send(f'{ctx.author.mention} ' + mes)
+    return
+
 #################################
 #SQLite
 #################################
@@ -195,7 +214,6 @@ class __Home(commands.Cog, name = 'Home'):
         self.bot = bot
 
     def getbattlerule(self, args):
-        print((args))
         battlerule = 1
         if (len(args) == 2):
             rate = args[1]
