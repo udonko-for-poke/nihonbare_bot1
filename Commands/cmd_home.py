@@ -139,7 +139,7 @@ async def get_rank(ctx, rate, battle_rule):
     save_update_time([ts[0], old_ts[1]])
     dt = datetime.datetime.fromtimestamp(ts[0])
 
-    if (rank > len(ranking_list)):
+    if (rate > ranking_list[len(ranking_list)-1]):
         await ctx.send(f'{ctx.author.mention} ランキング圏外です（'+str(dt)+'）')
     else:
         await ctx.send(f'{ctx.author.mention} '+str(rank)+'位です（'+str(dt)+'）')
@@ -156,7 +156,7 @@ async def get_rate(ctx, rank, battle_rule):
     ranking_list = load_trainer()    
     save_update_time([ts[0], old_ts[1]])
     dt = datetime.datetime.fromtimestamp(ts[0])
-    if (rank < ranking_list[len(ranking_list)-1]):
+    if (rank > len(ranking_list) or rank < 1):
         await ctx.send(f'{ctx.author.mention} レートは不明です（'+str(dt)+'）')
     else:
         await ctx.send(f'{ctx.author.mention} レートは約'+str(ranking_list[rank-1]/1000)+'です（'+str(dt)+'）')
