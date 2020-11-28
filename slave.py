@@ -89,7 +89,7 @@ async def send_message(send_method, mention, mes):
         if (len(mes) == 0):
             await send_method(f'{mention} 該当するデータがありません')
         elif (len(mes) == 1):
-            await send_method(f'{mention} ' + str(mes(0)))
+            await send_method(f'{mention} ' + str(mes[0]))
         else:
             reply = ''
             for data in mes:
