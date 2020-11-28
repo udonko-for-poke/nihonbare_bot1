@@ -84,6 +84,30 @@ async def on_command_error(ctx, error):
 def is_me(m):
     return m.author == bot.user
 
+async def send_message(send_method, mention, mes):
+    if (type(mes) is list):
+        if (len(mes) == 0):
+            await send_method(f'{mention} 該当するデータがありません')
+        elif (len(mes) == 1):
+            await send_method(f'{mention} ' + str(mes(0)))
+        else:
+            reply = ''
+            for data in mes:
+                reply += data+'\n'
+            try:
+                embed = discord.Embed(title="Result",description=reply)
+                await send_method(f'{mention} ', embed=embed)
+            except:
+                await send_method(f'{mention} エラー：該当するデータが多すぎます')
+    elif (type(mes) is str):
+        if (len(mes) == 0):
+            await send_method(f'{mention} 該当するデータがありません')
+        else:
+            await send_method(f'{mention} ' + str(mes))
+    else:
+        pass
+    return
+
 class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
         super().__init__()
@@ -213,22 +237,25 @@ class __Home(commands.Cog, name = 'Home'):
         super().__init__()
         self.bot = bot
 
-    def getbattlerule(self, args):
+    def getbattlerule(self, args, argnum):
         battlerule = 1
-        if (len(args) == 2):
-            rate = args[1]
+        rate = []
+        if (len(args) == argnum+1):
+            for i in range(argnum):
+                rate.append(args[i+1])
             if (args[0] == '2' or args[0] == '1'):
                 battlerule = int(args[0])
             else:
-                return -1, None
-        elif (len(args) == 1):
-            rate = args[0]
+                return [-1], None
+        elif (len(args) == argnum):
+            for i in range(argnum):
+                rate.append(args[i])
         else:
-            return -1, None
+            return [-1], None
         try:
-            intrate = int(rate)
+            intrate = [int(i) for i in rate]
         except:
-            return -1, None
+            return [-1], None
         return intrate, battlerule
         
     async def printerror(self, ctx):
@@ -238,23 +265,47 @@ class __Home(commands.Cog, name = 'Home'):
     @commands.command()
     async def rank(self, ctx, *battlerule_rate):
         """レートに対応する順位を求める"""
-        rate, battlerule = self.getbattlerule(battlerule_rate)
-        if (rate == -1):
+        rate, battlerule = self.getbattlerule(battlerule_rate, 1)
+        if (battlerule == None):
             await self.printerror(ctx)
             return
+        rate = rate[0]
         print('rank:'+str(rate))
-        await cmd_home.get_rank(ctx, rate, battlerule)
+        success = await cmd_home.get_rank(ctx, rate, battlerule)
+        if (success == 0):
+            await send_message(ctx.send, ctx.author.mention, 'データの取得に失敗しました')
+            return
         return
 
     @commands.command()
     async def rate(self, ctx, *battlerule_rank):
         """順位に対応するレートを求める"""
-        rank, battlerule = self.getbattlerule(battlerule_rank)
-        if (rank == -1):
+        rank, battlerule = self.getbattlerule(battlerule_rank, 1)
+        if (battlerule == None):
             await self.printerror(ctx)
             return
+        rank = rank[0]
         print('rate:'+str(rank))
-        await cmd_home.get_rate(ctx, rank, battlerule)
+        success = await cmd_home.get_rate(ctx, rank, battlerule)
+        if (success == 0):
+            await send_message(ctx.send, ctx.author.mention, 'データの取得に失敗しました')
+            return
+        return
+
+    @commands.command()
+    async def pokerank(self, ctx, *battlerule_upper_lower):
+        """ポケモンの使用率を求める"""
+        rank, battlerule = self.getbattlerule(battlerule_upper_lower, 2)
+        if (battlerule == None):
+            await self.printerror(ctx)
+            return
+        print('pokerank:'+str(rank))
+        pokelist, update_time = await cmd_home.pokerank(ctx, rank, battlerule)
+        if (len(pokelist) <= 0):
+            await send_message(ctx.send, ctx.author.mention, 'No data('+update_time+')')
+            return
+        await send_message(ctx.send, ctx.author.mention, pokelist)
+        await send_message(ctx.send, '', '('+update_time+')')
         return
 
 ##  改行を伴うコマンドの受け付け
