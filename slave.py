@@ -238,8 +238,9 @@ async def card(ctx, *pokes):
     await ctx.send(file=file_img)
     await ctx.message.delete()
     if (res == 0):
-        embed = discord.Embed(title="もしかして",description=candidate)
-        await ctx.send(f'{ctx.author.mention} ', embed=embed)
+        if (len(candidate) == 1):
+            candidate.append([''])
+        await send_message(ctx.send, ctx.author.mention, candidate, delimiter = ['\n', '\n'], title = 'もしかして')
     return
         
 @bot.command()
@@ -281,8 +282,9 @@ class __Status(commands.Cog, name = '数値確認'):
         """種族値の表示，数値を書くと該当Lvでの実数値を表示"""
         res, result = cmd_status.st(pokedata)
         if (res == 1):
-            print('status->'+poke+','+str(isreal))
-            await send_message(ctx.send, ctx.author.mention, result, delimiter = ['\n', '-'], isembed = False)
+            print('status')
+            print(result)
+            await send_message(ctx.send, ctx.author.mention, list(result), delimiter = ['\n', '-'], isembed = False)
         else:
             await self.send_err(ctx, res, result)
         return
@@ -304,7 +306,7 @@ class __Status(commands.Cog, name = '数値確認'):
         res, result = cmd_status.calciv(poke, lv, args)
         if (res == 1):
             print('checkiv->'+poke)
-            await send_message(ctx.send, ctx.author.mention, result, delimiter = [' - ', '～'], isembed = False)
+            await send_message(ctx.send, ctx.author.mention, result, delimiter = [' - '], isembed = False)
         else:
             await self.send_err(ctx, res, result)
         return
@@ -483,7 +485,6 @@ async def on_message(message):
             return
         with message.channel.typing():
             res, result = cmd_sql.playsql(iter(content))
-            print(result)
             if (res == 1):
                 await send_message(message.channel.send, message.author.mention, result, delimiter = ['\n', ','])
             else:
@@ -496,9 +497,8 @@ async def on_message(message):
         return
     
     if(content.startswith('?')):
-        res, result = cmd_sql.registered_sql(iter(content), SQLCMD_PATH)
         with message.channel.typing():
-            res, result = cmd_sql.playsql(iter(content))
+            res, result = cmd_sql.registered_sql(iter(content), SQLCMD_PATH)
             if (res == 1):
                 await send_message(message.channel.send, message.author.mention, result, delimiter = ['\n', ','])
             else:
