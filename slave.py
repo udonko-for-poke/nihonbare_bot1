@@ -4,7 +4,6 @@ import os
 import sys
 import re
 sys.path.append(os.path.join(os.path.dirname(__file__), 'Commands'))
-import cmd_roles
 import cmd_raid
 import cmd_card
 import cmd_status
@@ -36,11 +35,6 @@ with open(TOKEN_PATH, "r",encoding="utf-8_sig") as f:
     l = f.readlines()
     l_strip = [s.strip() for s in l]
     TOKEN = l_strip[0]
-
-#在庫の読み込み
-with open(STOCK_PATH, "r",encoding="utf-8_sig") as f:
-    l = f.readlines()
-    l_poke = [s.strip() for s in l]
 
 # "!"から始まるものをコマンドと認識する
 prefix = '!'
@@ -81,24 +75,40 @@ async def on_command_error(ctx, error):
     raise error
 
 #botが自分自身を区別するための関数
-def is_me(m):
-    return m.author == bot.user
+is_me = lambda m: m.author == bot.user
 
-async def send_message(send_method, mention, mes):
+def list2str(list_, delimiter):
+    result = ''
+    if (len(delimiter) == 0):
+        d = ' '
+        for s in list_:
+            result += str(s) + d
+        return result[:-1]
+    
+    d = delimiter[0]
+    for s in list_:
+        if (type(s) is list):
+            result += list2str(s, delimiter[1:]) + d
+        else:
+            result += str(s) + d
+    return result[:-1*len(d)]
+
+async def send_message(send_method, mention, mes, title = 'Result', delimiter = ['\n'], isembed = True):
     if (type(mes) is list):
         if (len(mes) == 0):
             await send_method(f'{mention} 該当するデータがありません')
         elif (len(mes) == 1):
             await send_method(f'{mention} ' + str(mes[0]))
         else:
-            reply = ''
-            for data in mes:
-                reply += data+'\n'
-            try:
-                embed = discord.Embed(title="Result",description=reply)
-                await send_method(f'{mention} ', embed=embed)
-            except:
-                await send_method(f'{mention} エラー：該当するデータが多すぎます')
+            reply = list2str(mes, delimiter)
+            if (isembed):
+                try:
+                    embed = discord.Embed(title=title, description=reply)
+                    await send_method(f'{mention} ', embed=embed)
+                except:
+                    await send_method(f'{mention} エラー：該当するデータが多すぎます')
+            else:
+                await send_message(send_method, mention, '\n'+reply, title = title)
     elif (type(mes) is str):
         if (len(mes) == 0):
             await send_method(f'{mention} 該当するデータがありません')
@@ -112,19 +122,46 @@ class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
+
+    def select_roll(self, role):
+        global SERVERID
+        global CALL_ID
+        if (role == 'slave'):
+            return SLAVE_ID
+        if (role == 'call'):
+            return CALL_ID
+        return None
         
+    def exist_role(self, ctx, role):
+        r = self.select_roll(role)
+        if (r == None):
+            return None
+        return ctx.message.guild.get_role(r)
+
     @commands.command()
     # 役職の付与
     async def add(self, ctx, role):
         """役職を付与：slave->レイドの奴隷、call->通話通知"""
-        await cmd_roles.add(ctx, role)
+        r = self.exist_role(ctx, role)
+        if (r == None):
+            await send_message(ctx.send, ctx.author.mention, role+'オプションは実装されていません\n実装済みのオプション：\'slave\', \'call\'')
+        else:
+            print(str(ctx.message.author.name)+'->'+str(role))
+            await ctx.author.add_roles(r)
+            await send_message(ctx.send, ctx.author.mention, '役職を追加しました')
         return
         
     # 役職の解除
     @commands.command()
     async def rm(self, ctx, role):
         """役職を解除"""
-        await cmd_roles.rm(ctx, role)
+        r = self.exist_role(ctx, role)
+        if (r == None):
+            await send_message(ctx.send, ctx.author.mention, role+'オプションは実装されていません\n実装済みのオプション：\'slave\', \'call\'')
+        else:
+            print(str(ctx.message.author.name)+' del '+str(role))
+            await ctx.author.remove_roles(r)
+            await send_message(ctx.send, ctx.author.mention, '役職を削除しました')
         return
 
 class __Raid(commands.Cog, name = 'レイド関連'):
@@ -132,45 +169,84 @@ class __Raid(commands.Cog, name = 'レイド関連'):
         super().__init__()
         self.bot = bot
 
+    def make_err(self, res):
+        if (res[0] == -1):
+            return 'ポケモン名が短すぎます。ポケモン名は3文字以上にしてください。'
+        if (res[0] == -2):
+            return res[1]+'\nのレイドは開催済みです'
+        return
+        
     # 在庫の確認
     @commands.command()
     async def check(self, ctx, poke):
         """レイドが開催済みかどうかを検索"""
-        global l_poke
-        await cmd_raid.process_raid_check(ctx, poke, l_poke)
+        print('check:' + poke)
+        global STOCK_PATH
+        res = cmd_raid.process_raid_check(poke, STOCK_PATH)
+        if (res[0] == 1):
+            await send_message(ctx.send, ctx.author.mention, str(poke) + 'レイドのデータはありません')
+        else:
+            await send_message(ctx.send, ctx.author.mention, self.make_err(res))
+        return
         
     @commands.command()
     async def store(self, ctx, poke):
         """開催済みレイドの追加"""
+        print('add:' + poke)
         global l_poke
-        l_poke = await cmd_raid.process_raid_add(ctx, poke, STOCK_PATH, l_poke)        
+        res = cmd_raid.process_raid_add(poke, STOCK_PATH)
+        if (res[0] == 1):
+            await send_message(ctx.send, ctx.author.mention, str(poke) + 'レイドを登録しました')
+        else:
+            await send_message(ctx.send, ctx.author.mention, self.make_err(res))
+        return
 
     @commands.command()
     async def raid(self, ctx, cmd, poke):
         """レイド関連のコマンド：add->store, check, del:削除（HOSTのみ使用可)"""
         global l_poke
+        global HOST_ROLE
+        global STOCK_PATH
         if (cmd == 'add'):
-            l_poke = await cmd_raid.process_raid_add(ctx, poke, STOCK_PATH, l_poke)
+            self.store(ctx, poke)
             return
         if (cmd == 'check'):
-            await cmd_raid.process_raid_check(ctx, poke, l_poke)
+            self.check(ctx, poke)
             return
         if (cmd == 'del'):
-            l_poke = await cmd_raid.process_raid_del(ctx, poke, STOCK_PATH, l_poke)
+            if (ctx.message.author.top_role.id != HOST_ROLE):
+                await send_message(ctx.send, ctx.author.mention, '権限が足りません')
+                return
+            print('del:' + poke)
+            res = cmd_raid.process_raid_del(poke, HOST_ROLE, STOCK_PATH)
+            if (res[0] == 1):
+                await send_message(ctx.send, ctx.author.mention, '\n' + str(poke) + 'レイドを削除しました')
+            elif (res[0] == 0):
+                await send_message(ctx.send, ctx.author.mention, '\n' + str(poke) + 'レイドが見つかりませんでした')
+            else:
+                await send_message(ctx.send, ctx.author.mention, self.make_err(res))
             return
         return
 
 @bot.command()
 async def card(ctx, *pokes):
     """簡易な構築の画像を生成"""
-    await cmd_card.makecard(ctx, pokes, IMG_PATH)
+    #ユーザーアイコンDL
+    await ctx.message.author.avatar_url.save(IMG_PATH+'user.png', seek_begin = True)
+    res, candidate = await cmd_card.makecard(pokes, IMG_PATH)
+    file_img = discord.File(IMG_PATH+'out.jpg')
+    await ctx.send(file=file_img)
+    await ctx.message.delete()
+    if (res == 0):
+        embed = discord.Embed(title="もしかして",description=candidate)
+        await ctx.send(f'{ctx.author.mention} ', embed=embed)
     return
         
 @bot.command()
 async def bkp(ctx):
     """botのデータのバックアップを取る"""
     if (ctx.message.author.top_role.id != HOST_ROLE):
-        await ctx.send(f'{ctx.author.mention} 権限が足りません')
+        await send_message(ctx.send, ctx.author.mention, '権限が足りません')
         return
     global MAINPATH
     channel  = bot.get_channel(BKP_CHANNEL)
@@ -180,7 +256,7 @@ async def bkp(ctx):
         mes = 'バックアップを取りました'
     else:
         mes = 'バックアップに失敗しました'
-    await ctx.send(f'{ctx.author.mention} ' + mes)
+    await send_message(ctx.send, ctx.author.mention, mes)
     return
 
 #################################
@@ -190,23 +266,47 @@ class __Status(commands.Cog, name = '数値確認'):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
-    ##  種族値、実数値の表示
+    
+    async def send_err(self, ctx, errtype, msg):
+        if (errtype == -1):
+            await send_message(ctx.send, ctx.author.mention, 'エラー：'+msg+'が見つかりませんでした')
+        if (errtype == -2):
+            await send_message(ctx.send, ctx.author.mention, msg, title = 'もしかして')
+        if (errtype == -3):
+            await send_message(ctx.send, ctx.author.mention, 'エラー：引数の数が不正です')
+        return
+
     @commands.command()
     async def st(self, ctx, *pokedata):
         """種族値の表示，数値を書くと該当Lvでの実数値を表示"""
-        await cmd_status.st(ctx, pokedata)
+        res, result = cmd_status.st(pokedata)
+        if (res == 1):
+            print('status->'+poke+','+str(isreal))
+            await send_message(ctx.send, ctx.author.mention, result, delimiter = ['\n', '-'], isembed = False)
+        else:
+            await self.send_err(ctx, res, result)
         return
 
     @commands.command()
     async def korippo(self, ctx, poke):
         """コオリッポ算"""
-        await cmd_status.korippo(ctx, poke)
+        res, result = cmd_status.korippo(poke)
+        if (res == 1):
+            print('korippo->'+poke)
+            await send_message(ctx.send, ctx.author.mention, result + '(/コオリッポ)です')
+        else:
+            await self.send_err(ctx, res, result)
         return
 
     @commands.command()
     async def calciv(self, ctx, poke, lv, *args):
         """個体値チェック"""
-        await cmd_status.calciv(ctx, poke, lv, args)
+        res, result = cmd_status.calciv(poke, lv, args)
+        if (res == 1):
+            print('checkiv->'+poke)
+            await send_message(ctx.send, ctx.author.mention, result, delimiter = [' - ', '～'], isembed = False)
+        else:
+            await self.send_err(ctx, res, result)
         return
 
 class __SQL(commands.Cog, name = 'SQL'):
@@ -214,22 +314,54 @@ class __SQL(commands.Cog, name = 'SQL'):
         super().__init__()
         self.bot = bot
 
+    async def make_err(self, ctx, errtype):
+        if (errtype == -1):
+            await send_message(ctx.send, ctx.author.mention, 'エラー：コマンドが不適切です')
+        if (errtype == -2):
+            await send_message(ctx.send, ctx.author.mention, 'エラー：既に定義されています')
+        if (errtype == -3):
+            await send_message(ctx.send, ctx.author.mention, 'エラー：コマンドが登録されていません')
+        if (errtype == -4):
+            await send_message(ctx.send, ctx.author.mention, 'エラー：コマンドが見つかりません')
+        return
+
     @commands.command()
     async def addsql(self, ctx, *cmd_SQL):
         """新規SQL文の登録"""
-        await cmd_sql.addsql(ctx, cmd_SQL, SQLCMD_PATH)
+        res, cmd = cmd_sql.addsql(cmd_SQL, SQLCMD_PATH)
+        if (res == 1):
+            send_message(ctx.send, ctx.author.mention, '(コマンド「'+cmd+'」が登録されました')
+            print('addcmd='+cmd)
+        else:
+            await self.make_err(ctx, res)
         return
       
     @commands.command()
     async def showsql(self, ctx, *cmd_SQL):
         """登録済みSQL文の表示"""
-        await cmd_sql.showsql(ctx, cmd_SQL, SQLCMD_PATH)
+        res, text = cmd_sql.showsql(cmd_SQL, SQLCMD_PATH)
+        if (res == 1):
+            await send_message(ctx.send, ctx.author.mention, text, title = '', delimiter = ['\n'])
+        elif (res == 2):
+            if (len(text) == 0):
+                text = ''
+            elif (len(text) == 1):
+                text = '・'+text[0][0]+'/n'+text[0][1]
+            else:
+                text[0][0] = '・' + text[0][0]
+            await send_message(ctx.send, ctx.author.mention, text, title = '', delimiter = ['\n・', '：\n    '])
+        else:
+            await self.make_err(ctx, res)
         return
 
     @commands.command()
     async def delsql(self, ctx, cmd):
         """登録済みSQL文の削除"""
-        await cmd_sql.delsql(ctx, cmd, SQLCMD_PATH)
+        res = cmd_sql.delsql(cmd, SQLCMD_PATH)
+        if (res == 1):
+            await send_message(ctx.send, ctx.author.mention, ' 削除しました')
+        else:
+            await self.make_err(ctx, res)
         return
 
 class __Home(commands.Cog, name = 'Home'):
@@ -340,19 +472,37 @@ class __Home(commands.Cog, name = 'Home'):
         print(update_time)
         await send_message(ctx.send, '', '('+update_time+')')
         return
+
 ##  改行を伴うコマンドの受け付け
 @bot.event
 async def on_message(message):
-    head = message.content[:11].lower()
+    content = message.content
+    head = content[:11].lower()
     if head == '!sql select':
-        await cmd_sql.playsql(message, MY_SERVER, MY_SERVER2, FOR_BOT)
+        if (message.channel.id != FOR_BOT and message.channel.guild.id != MY_SERVER and message.channel.guild.id != MY_SERVER2):
+            return
+        with message.channel.typing():
+            res, result = cmd_sql.playsql(iter(content))
+            print(result)
+            if (res == 1):
+                await send_message(message.channel.send, message.author.mention, result, delimiter = ['\n', ','])
+            else:
+                await send_message(message.channel.send, message.author.mention, result)
         return
-    head = message.content[:9].lower()
+    
+    head = content[:9].lower()
     if head == '!editsql ':
-        await cmd_sql.editsql(message, SQLCMD_PATH)
+        await send_message(message.channel.send, message.author.mention, cmd_sql.editsql(iter(content), SQLCMD_PATH))
         return
-    if(message.content.startswith('?')):
-        await cmd_sql.registered_sql(message, SQLCMD_PATH)
+    
+    if(content.startswith('?')):
+        res, result = cmd_sql.registered_sql(iter(content), SQLCMD_PATH)
+        with message.channel.typing():
+            res, result = cmd_sql.playsql(iter(content))
+            if (res == 1):
+                await send_message(message.channel.send, message.author.mention, result, delimiter = ['\n', ','])
+            else:
+                await send_message(message.channel.send, message.author.mention, result)
         return
     await bot.process_commands(message)
     return
