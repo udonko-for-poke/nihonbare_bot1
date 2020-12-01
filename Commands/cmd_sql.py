@@ -1,30 +1,21 @@
 import pickle
 import os
-import pickle
 import re
-import discord
+import getSQL
 
-async def sqlreq(message, cmd, argtpl):
-    import getSQL
-    print('SQL request->'+cmd+','+str(argtpl))
-    result = await getSQL.sqlrequest(cmd, argtpl)
-    print(result)
+def sqlreq(cmd, argtpl):
+    print('SQL request')
+    result = getSQL.sqlrequest(cmd, argtpl)
     if (result[1] == -1):
-        await message.channel.send(f'{message.author.mention} 該当するデータが見つかりませんでした')
+        return False, '該当するデータが見つかりませんでした'
     elif (result[1] == -2):
-        await message.channel.send(f'{message.author.mention} \n要求エラー：'+result[0])
+        return False, '\n要求エラー：'+result[0]
     else:
-        try:
-            embed = discord.Embed(title="Result",description=result[0])
-            await message.channel.send(f'{message.author.mention} ', embed=embed)
-        except:
-            await message.channel.send(f'{message.author.mention} エラー：該当するデータが多すぎます')
-    return
+        return 1, result[0]
 
-async def addsql(ctx, arg, SQLCMD_PATH):
+def addsql(arg, SQLCMD_PATH):
     if (len(arg) <= 1):
-        await ctx.send(f'{ctx.author.mention} エラー：コマンドが短すぎます')
-        return
+        return -1, None     #不適切なコマンド
     cmd = arg[0]
     text = ''
     info=''
@@ -36,8 +27,7 @@ async def addsql(ctx, arg, SQLCMD_PATH):
     if (text_head == 'select'):
         pass
     else:
-        await ctx.send(f'{ctx.author.mention} エラー：コマンドが不適切です')
-        return
+        return -1, None
         
     sql_dict = {}
     if os.path.getsize(SQLCMD_PATH) > 0:
@@ -45,57 +35,43 @@ async def addsql(ctx, arg, SQLCMD_PATH):
             sql_dict = pickle.load(f)
                 
         if (cmd in sql_dict):
-            await ctx.send(f'{ctx.author.mention} エラー：既に定義されています')
-            return
+            return -2, None     #定義済みのコマンド
         
     sql_dict[cmd] = [text,'']
     with open(SQLCMD_PATH, 'wb') as f:
         pickle.dump(sql_dict, f)
-    await ctx.send(f'{ctx.author.mention} コマンド「'+cmd+'」が登録されました')
-    print('cmd='+cmd)
-    print('text='+text)
-    return
+    return 1, cmd
 
-async def showsql(ctx, arg, SQLCMD_PATH):
+def showsql(arg, SQLCMD_PATH):
     if os.path.getsize(SQLCMD_PATH) <= 0:
-        await ctx.send(f'{ctx.author.mention} エラー：コマンドが登録されていません')
-        return
+        return -3, None #コマンドが未登録
     with open(SQLCMD_PATH, 'rb') as f:
         sql_dict = pickle.load(f)
 
-    text = ''
+    text = []
     if (len(arg) == 0):
         for cmds in sql_dict:
-            text += '\n　・' + cmds + '\n　' + sql_dict[cmds][1]
+            text.append(cmds)
+        return 1, text
     else:
         for cmds in arg:
             if (cmds in sql_dict):
-                text += '\n　・' + cmds + '\n　' + sql_dict[cmds][1]
-            
-    await ctx.send(f'{ctx.author.mention} '+text)
-    return
+                text.append([cmds,sql_dict[cmds][1]])
+        return 2, text
 
-async def delsql(ctx, cmd, SQLCMD_PATH):
+def delsql(cmd, SQLCMD_PATH):
     if os.path.getsize(SQLCMD_PATH) <= 0:
-        await ctx.send(f'{ctx.author.mention} エラー：コマンドが登録されていません')
-        return
+        return -3
     with open(SQLCMD_PATH, 'rb') as f:
         sql_dict = pickle.load(f)
     if (cmd in sql_dict):
         del sql_dict[cmd]
         with open(SQLCMD_PATH, 'wb') as f:
             pickle.dump(sql_dict, f)
-        await ctx.send(f'{ctx.author.mention} 削除しました')
-        return
-    else:
-        await ctx.send(f'{ctx.author.mention} エラー：コマンドが見つかりません')
-    return
+        return 1
+    return -4
 
-async def playsql(message, MY_SERVER, MY_SERVER2, FOR_BOT):
-    if (message.channel.id != FOR_BOT and message.channel.guild.id != MY_SERVER and message.channel.guild.id != MY_SERVER2):
-        return
-    with message.channel.typing():
-        mes = iter(message.content)
+def playsql(mes):
         arg1 = ''
         arg2 = ''
         flg = 0
@@ -112,14 +88,11 @@ async def playsql(message, MY_SERVER, MY_SERVER2, FOR_BOT):
         arg1 = arg1[5:]
         arglist = arg2.split()
         argtpl  = tuple(arglist)
-        await sqlreq(message, arg1, argtpl)
-        return
+        return sqlreq(arg1, argtpl)
             
-async def editsql(message, SQLCMD_PATH):
+def editsql(mes, SQLCMD_PATH):
     if os.path.getsize(SQLCMD_PATH) <= 0:
-        await message.channel.send(f'{message.author.mention} エラー1：コマンドが見つかりません')
-        return
-    mes = iter(message.content)
+        return 'エラー1：コマンドが見つかりません'
     cmd = ''
     text = ''
     flg = 0
@@ -140,20 +113,17 @@ async def editsql(message, SQLCMD_PATH):
     if (cmd in sql_dict):
         pass
     else:
-        await message.channel.send(f'{message.author.mention} エラー2：コマンド「'+cmd+'」が見つかりません')
-        return
+        return 'エラー2：コマンド「'+cmd+'」が見つかりません'
         
     sql_dict[cmd][1] = text
     with open(SQLCMD_PATH, 'wb') as f:
         pickle.dump(sql_dict, f)
-    await message.channel.send(f'{message.author.mention} 説明文を追加しました')
+    return '説明文を追加しました'
 
-async def registered_sql(message, SQLCMD_PATH):
+def registered_sql(mes, SQLCMD_PATH):
     if os.path.getsize(SQLCMD_PATH) <= 0:
-        await message.channel.send(f'{message.author.mention} エラー1：コマンドが見つかりません')
-        return
+        return False, 'エラー：コマンドが見つかりません'
 
-    mes = iter(message.content)
     cmd = ''
     args = ''
     flg = 0
@@ -175,8 +145,6 @@ async def registered_sql(message, SQLCMD_PATH):
     if (cmd in sql_dict):
         pass
     else:
-        await message.channel.send(f'{message.author.mention} エラー2：コマンド「'+cmd+'」が見つかりません')
-        return
+        return False, 'エラー：コマンド「'+cmd+'」が見つかりません'
             
-    await sqlreq(message, sql_dict[cmd][0] , tuple(arglist))
-    return
+    return sqlreq(sql_dict[cmd][0] , tuple(arglist))

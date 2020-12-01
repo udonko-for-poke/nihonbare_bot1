@@ -3,7 +3,7 @@ import jaconv
 import calc
 import re
 
-async def st(ctx, arg1):        
+def st(arg1):        
     #引数にint型のものがあれば引数2とする
     isreal = -1
     if (len(arg1) <= 1):
@@ -27,57 +27,46 @@ async def st(ctx, arg1):
     elif (str(arg2_int) == arg2 and 0 < arg2_int and arg2_int <= 100):
         isreal = arg2_int
         poke = arg
-    #ポリゴン2の表記を統一
-    poke  = poke.replace('２', '2')
-    poke_ = jaconv.hira2kata(poke)
-    print('status->'+poke+','+str(isreal))
+    
+    poke  = poke.replace('２', '2') #ポリゴン2の表記を統一
+    poke  = jaconv.hira2kata(poke)  #平仮名をカタカナに
     #   数値を取得
-    result = await getSQL.getstatus('name', poke_, isreal)
-    if (not result[0]):
-        await ctx.send(f'{ctx.author.mention} \n'+result[1])
+    res, result = getSQL.getstatus('name', poke, isreal)
+    if (not res):
+        return 1, result
     else:
-        result = await getSQL.getstatus('name', poke, isreal)
-        if (not result[0]):
-            await ctx.send(f'{ctx.author.mention} \n'+result[1])
+        result = getSQL.inname(poke)
+        if (len(result) <= 0 or len(result) >= 10):
+            return -1, poke
         else:
-            result = await getSQL.inname(poke_)
-            if (result[1] == -1 or result[1] >= 10):
-                await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
-            else:
-                embed = discord.Embed(title="もしかして",description=result[0])
-                await ctx.send(f'{ctx.author.mention} ', embed=embed)
+            return -2, result
     return
 
-async def korippo(ctx, poke):
+def korippo(poke):
     poke = jaconv.hira2kata(poke).replace('２', '2')
-    print('korippo->'+poke)
     cmd = 'select CAST(0.6*(H*2+31)+70 AS INT) from pokemon WHERE name = ?'
     tpl = (poke,)
-    result = await getSQL.sqlrequest(cmd, tpl)
+    result = getSQL.sqlrequest(cmd, tpl)
     if (result[1]==-1):
-        result = await getSQL.inname(poke)
-        if (result[1] == -1 or result[1] >= 10):
-            await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
+        result = getSQL.inname(poke)
+        if (len(result) <= 0 or len(result) >= 10):
+            return -1, poke
         else:
-            embed = discord.Embed(title="もしかして",description=result[0])
-            await ctx.send(f'{ctx.author.mention} ', embed=embed)
-        return
+            return -2, result
+
     HP = int(result[0])
     cmd = 'select get from pokemon WHERE name = ?'
-    result = await getSQL.sqlrequest(cmd, tpl)
+    result = getSQL.sqlrequest(cmd, tpl)
     GET = int(result[0])
     B   = calc.get_B(HP, GET)
     if (B>=255):
-        await ctx.send(f'{ctx.author.mention} ∞(/コオリッポ)です')
-        return
+        return 1, '∞'
     G = calc.get_G(B)
     value = (G/49806)**4
-    await ctx.send(f'{ctx.author.mention} '+str(round(value,2))+'(/コオリッポ)です')
-    return
+    return 1, str(round(value,2))
 
-async def calciv(ctx, poke, lv, args):
+def calciv(poke, lv, args):
     st_list, check_list = [], []
-    ########################################　性格補正対応、及びインデントなし箇所指定への対応
     rise, down = -1, -1
     #引数の中に個体値チェックの箇所指定があるかどうかの確認
     for x in args:
@@ -92,12 +81,12 @@ async def calciv(ctx, poke, lv, args):
         if (re.fullmatch(r'[A-DHS]*', x, flags=re.IGNORECASE)):
             for el in x:
                 check_list.append(el.upper())
-    ########################################
+
     if (not check_list):
         check_list = ['H', 'A', 'B', 'C', 'D', 'S']
     #求めたい個体値箇所と数値数が一致するかの確認
     if (len(st_list) != len(check_list)):
-        await ctx.send(f'{ctx.author.mention}エラー：引数の数が不正です')
+        return -3, None
     #個体値確認箇所にHPが含まれているかの確認
     else:
         if ('H' not in check_list):
@@ -106,12 +95,9 @@ async def calciv(ctx, poke, lv, args):
             check_h = check_list.index('H')
 
         txt = 'SELECT ' +  ','.join(check_list) + ' FROM pokemon WHERE name = ?'
-        ################################## 性格補正対応用の引数の追加
-        result = await getSQL.getiv(poke, txt, lv, st_list, check_h, rise, down)
-        ##############################################
+        result = getSQL.getiv(poke, txt, lv, st_list, check_h, rise, down)
         if (not result):
-            await ctx.send(f'{ctx.author.mention} エラー：'+poke+'が見つかりませんでした')
+            return -1, poke
         else:
-            print('calciv:'+poke)
-            await ctx.send(f'{ctx.author.mention}\n' + result)
+            return 1, result
     return

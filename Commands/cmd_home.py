@@ -149,7 +149,7 @@ async def get_pokerank(ts, rst, season_id, battle_rule):
         detail = json.load(res)
     with open(MAINPATH+'/pokerank'+str(battle_rule)+'.pickle', 'wb') as f:
         pickle.dump(detail, f)
-    headers = {
+    req_header = {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Mobile Safari/537.36',
         'countrycode': '304',
         'authorization': 'Bearer',
@@ -158,8 +158,8 @@ async def get_pokerank(ts, rst, season_id, battle_rule):
     }
     pokedata = {}
     for i in range(1, 6):
-        url = f'https://resource.pokemon-home.com/battledata/ranking/'+str(season_id)+'/'+str(rst)+'/'+str(ts)+'/pdetail-'+str(i)
-        req = urllib.request.Request(url, headers=headers)
+        url = f'https://resource.pokemon-home.com/battledata/ranking/{season_id}/{rst}/{ts}/pdetail-{i}'
+        req = urllib.request.Request(url, headers = req_header)
         with urllib.request.urlopen(req) as res:
             pdetail = json.load(res)
         pokedata.update(pdetail)
@@ -235,7 +235,6 @@ async def get_rate(ctx, rank, battle_rule):
     old_ts = load_update_time(battle_rule)
     ts, rst, season_id = await create_request(battle_rule)
     if (old_ts[0] != ts[0]):
-        
         success = await get_trainer(ts[0], rst, season_id, battle_rule)
         if (success == 0):
             return 0

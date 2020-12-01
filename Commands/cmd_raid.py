@@ -7,52 +7,54 @@ def chk_stock(name, l_poke):
         if (name in poke):
             send_txt += '\n' + poke
             n += 1
-            
     return send_txt, n
 
-#レイドの登録
-async def process_raid_add(ctx, arg, STOCK_PATH, l_poke):
-    if (len(arg) <= 2):
-        await ctx.send(f'{ctx.author.mention} ポケモン名が短すぎます。ポケモン名は3文字以上にしてください。')
-        return
-
-    print('add:' + arg)
-    result = chk_stock(arg, l_poke)
-    if (result[1]):
-        await ctx.send(f'{ctx.author.mention}'+result[0]+'\nのレイドが既に登録されています')
-    else:
-        l_poke.append(arg)
-        with open(STOCK_PATH, 'w',encoding="utf-8_sig") as f:
-            for x in l_poke:
-                f.write(str(x) + "\n")
-        await ctx.send(f'{ctx.author.mention}'+'\n' + str(arg) + 'レイドを登録しました')
+#在庫の読み込み
+def read_lpoke(STOCK_PATH):
+    with open(STOCK_PATH, "r",encoding="utf-8_sig") as f:
+        l = f.readlines()
+        l_poke = [s.strip() for s in l]
     return l_poke
 
-#在庫確認
-async def process_raid_check(ctx, arg, l_poke):
-    if (len(arg) <= 2):
-        await ctx.send(f'{ctx.author.mention} ポケモン名が短すぎます。ポケモン名は3文字以上にしてください。')
-        return
-    print('check:' + arg)
-    result = chk_stock(arg, l_poke)
-    if (result[1]):
-        await ctx.send(f'{ctx.author.mention}'+result[0]+'\nのレイドは開催済みです')
-    else:
-        await ctx.send(f'{ctx.author.mention}'+'\n' + str(arg) + 'レイドのデータはありません')
+#在庫の記録
+def write_lpoke(STOCK_PATH, l_poke):
+    with open(STOCK_PATH, 'w',encoding="utf-8_sig") as f:
+        for x in l_poke:
+            f.write(str(x) + "\n")
     return
 
+#レイドの登録
+def process_raid_add(arg, STOCK_PATH):
+    if (len(arg) <= 2):
+        return [-1, '']
 
-async def process_raid_del(ctx, name, STOCK_PATH, l_poke):
-    if (ctx.message.author.top_role.id != HOST_ROLE):
-        await ctx.send(f'{ctx.author.mention} 権限が足りません')
-        return
-    print('del:' + name)
+    l_poke = read_lpoke(STOCK_PATH)
+    result = chk_stock(arg, l_poke)
+    if (result[1]):
+        return [-2, result[0]]
+    else:
+        l_poke.append(arg)
+        write_lpoke(STOCK_PATH, l_poke)
+        return [1, '']
+
+#在庫確認
+def process_raid_check(arg, STOCK_PATH):
+    if (len(arg) <= 2):
+        return [1, '']
+
+    l_poke = read_lpoke(STOCK_PATH)
+    result = chk_stock(arg, l_poke)
+    if (result[1]):
+        return [-2, result[0]]
+    else:
+        return [1, '']
+
+#在庫の削除
+def process_raid_del(name, HOST_ROLE, STOCK_PATH):
+    l_poke = read_lpoke(STOCK_PATH)
     if (name in l_poke):
         l_poke.remove(name)
-        with open(STOCK_PATH, 'w',encoding="utf-8_sig") as f:
-            for x in l_poke:
-                f.write(str(x) + "\n")
-        await ctx.send(f'{ctx.author.mention}'+'\n' + str(name) + 'レイドを削除しました')
+        write_lpoke(STOCK_PATH, l_poke)
+        return [1, '']
     else:
-        await ctx.send(f'{ctx.author.mention}'+'\n' + str(name) + 'レイドが見つかりませんでした')
-    return l_poke
+        return [0, '']
