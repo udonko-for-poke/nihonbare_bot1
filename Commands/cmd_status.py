@@ -33,7 +33,10 @@ def st(arg1):
     #   数値を取得
     res, result = getSQL.getstatus('name', poke, isreal)
     if (not res):
-        return 1, result
+        if (len(result) == 4):
+            return 1, result
+        else:
+            return 1, [list(result), []]
     else:
         result = getSQL.inname(poke)
         if (len(result) <= 0 or len(result) >= 10):

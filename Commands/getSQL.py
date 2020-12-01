@@ -135,20 +135,23 @@ def inname(name):
         else:
             arg += s
     name = arg
+    cnt = 0
     tpl = (name,)
     c.execute(txt, tpl)
     list1 = c.fetchone()
     if (list1 == None):
-        return '', -1
+        return ['', -1]
     result = []
+    cnt = 1
     for element in list1:
         result.append(str(element))
     for hit in c.fetchall():
         for element in hit:
             result.append(str(element))
+            cnt += 1
     poke_content.commit()
     poke_content.close()
-    return result
+    return [result, cnt]
 
 def getiv(poke, txt, lv, list_, check_h, rise=-1, down=-1):
     fpath = os.path.dirname(__file__)+'/sqldata/pokemon.sqlite3'

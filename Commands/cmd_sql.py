@@ -4,7 +4,7 @@ import re
 import getSQL
 
 def sqlreq(cmd, argtpl):
-    print('SQL request')
+    print('SQL request:' + cmd)
     result = getSQL.sqlrequest(cmd, argtpl)
     if (result[1] == -1):
         return False, '該当するデータが見つかりませんでした'
@@ -123,7 +123,7 @@ def editsql(mes, SQLCMD_PATH):
 def registered_sql(mes, SQLCMD_PATH):
     if os.path.getsize(SQLCMD_PATH) <= 0:
         return False, 'エラー：コマンドが見つかりません'
-
+    print(mes)
     cmd = ''
     args = ''
     flg = 0
