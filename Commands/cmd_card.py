@@ -15,7 +15,7 @@ async def makecard(arg, IMG_PATH):
     numbers= []
     #ポケモン名からIDを探してリストに格納
     c_flg = 0   #ポケモン名が一致しなかった場合にTrueになる
-    candidate = ''  #一致しないポケモンの候補
+    candidate = []  #一致しないポケモンの候補
     for poke in pokes:
         if (poke == 'null'):
             numbers.append('NULL')
@@ -29,7 +29,7 @@ async def makecard(arg, IMG_PATH):
                 if (result[1] == -1 or result[1] >= 10):
                     pass
                 else:
-                    candidate += result[0] + '\n'
+                    candidate.append(result[0])
                     c_flg = 1
                 continue
             numbers.append(result2 + '.gif')
