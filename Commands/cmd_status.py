@@ -118,9 +118,9 @@ def ivpuzzle(ivs):
     result = []
     if fixed_num <= 3:
         for target in range(fixed_num+1, 6):
-            pzl = puzzlable(fixed_locate, exposed_ivs, target)
-            if pzl[0]:
-                result.append('{}V{}連'.format(target, pzl[1]))
+            can_use, pzl = puzzlable(fixed_locate, exposed_ivs, target)
+            if can_use:
+                result.append('{}V{}連'.format(target, pzl))
     if not result:
         result = 1, 'seed特定に使用できない個体です'
     return 1, result
