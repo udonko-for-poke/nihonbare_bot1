@@ -104,3 +104,35 @@ def calciv(poke, lv, args):
         else:
             return 1, result
     return
+
+def ivpuzzle(ivs):
+    try:
+        _ivs = list(map(int, ivs))
+    except ValueError:
+        return 1, '引数の型が不正です'
+    fixed_locate = set([i for i in range(len(_ivs)) if _ivs[i] == 31])
+    exposed_ivs = list([s for s in _ivs if s < 31])
+    fixed_num = len(fixed_locate)
+    if fixed_num + len(exposed_ivs) != 6:
+        return -3, None
+    result = []
+    if fixed_num <= 3:
+        for target in range(fixed_num+1, 6):
+            pzl = puzzlable(fixed_locate, exposed_ivs, target)
+            if pzl[0]:
+                result.append('{}V{}連'.format(target, pzl[1]))
+    if not result:
+        result = 1, 'seed特定に使用できない個体です'
+    return 1, result
+
+def puzzlable(fixed_locate, exposed_ivs, target):
+    for i, x in enumerate(exposed_ivs):
+        flg = x % 8
+        if (flg <= 5):
+            fixed_locate.add(flg)
+        if len(fixed_locate) == target:
+            break
+    else:
+        return False, 0
+    result = (6-target) + (i+1)
+    return (result >= 5), result

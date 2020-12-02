@@ -311,6 +311,18 @@ class __Status(commands.Cog, name = '数値確認'):
             await self.send_err(ctx, res, result)
         return
 
+    #XXX:新しいクラスにした方がいい?関数も新しいcmd fileを作ってもいいか?
+    @commands.command()
+    async def puzzle(self, ctx, *ivs):
+        """個体値パズルの可否を判定"""
+        res, result = cmd_status.ivpuzzle(ivs)
+        if (res == 1):
+            print('puzzle->'+ ivs)
+            await send_message(ctx.send, ctx.author.mention, result, isembed=False)
+        else:
+            await self.send_err(ctx, res, result)
+
+
 class __SQL(commands.Cog, name = 'SQL'):
     def __init__(self, bot):
         super().__init__()
