@@ -332,7 +332,7 @@ class __SQL(commands.Cog, name = 'SQL'):
         """新規SQL文の登録"""
         res, cmd = cmd_sql.addsql(cmd_SQL, SQLCMD_PATH)
         if (res == 1):
-            send_message(ctx.send, ctx.author.mention, '(コマンド「'+cmd+'」が登録されました')
+            await send_message(ctx.send, ctx.author.mention, '(コマンド「'+cmd+'」が登録されました')
             print('addcmd='+cmd)
         else:
             await self.make_err(ctx, res)
