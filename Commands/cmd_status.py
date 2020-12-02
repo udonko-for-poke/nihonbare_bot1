@@ -1,7 +1,28 @@
+# coding: utf-8
 import getSQL
 import jaconv
 import calc
 import re
+
+def lang_check(l):
+    lang = l.lower()
+    Eng = ['英語', '英', '米', 'eng', 'english']
+    Chi = ['中国語', '中国', '中', 'chi', '	Chinese']
+    Deu = ['ドイツ語', 'ドイツ', '独', 'deu', 'German']
+    Kor = ['韓国語', '韓国', '韓', 'kor', 'Korean']
+    if (lang in Chi):
+        return 'CS, CT'
+    if (lang in Eng):
+        return 'Eng'
+    if (lang in Deu):
+        return 'Deu'
+    if (lang in Kor):
+        return 'Kor'
+    if ('繫' in lang):
+        return 'CT'
+    if ('簡' in lang):
+        return 'CS'
+    return None
 
 def st(arg1):        
     #引数にint型のものがあれば引数2とする
@@ -105,6 +126,7 @@ def calciv(poke, lv, args):
             return 1, result
     return
 
+
 def ivpuzzle(ivs):
     try:
         _ivs = list(map(int, ivs))
@@ -136,3 +158,30 @@ def puzzlable(fixed_locate, exposed_ivs, target):
         return False, 0
     result = (6-target) + (i+1)
     return (result >= 5), result
+
+def lang(keyword_lang):
+    if (len(keyword_lang) == 1):
+        lang = 'Eng'
+        poke = keyword_lang[0]
+    else:
+        arg1 = keyword_lang[0]
+        arg2 = keyword_lang[1]
+
+        lang = lang_check(arg1)
+        poke = arg2
+        if (lang == None):
+            lang = lang_check(arg2)
+            poke = arg1
+            if (lang == None):
+                lang = 'Eng'
+
+    cmd = f'SELECT {lang} FROM lang WHERE Jap == ?'
+    result = getSQL.sqlrequest(cmd, tuple([poke]))
+    if (result[1]==-1):
+        result = getSQL.inname(poke)
+        if (len(result) <= 0 or len(result) >= 10):
+            return -1, poke
+        else:
+            return -2, result
+    return 1, result[0]
+

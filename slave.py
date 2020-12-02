@@ -310,6 +310,17 @@ class __Status(commands.Cog, name = '数値確認'):
         else:
             await self.send_err(ctx, res, result)
         return
+    
+    @commands.command()
+    async def lang(self, ctx, *keyword_lang):
+        """日本語→外国語"""
+        res, result = cmd_status.lang(keyword_lang)
+        if (res == 1):
+            print('lang->'+str(keyword_lang))
+            await send_message(ctx.send, ctx.author.mention, result)
+        else:
+            await self.send_err(ctx, res, result)
+        return
 
     #XXX:新しいクラスにした方がいい?関数も新しいcmd fileを作ってもいいか?
     @commands.command()
