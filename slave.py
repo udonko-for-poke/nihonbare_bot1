@@ -332,6 +332,7 @@ class __Status(commands.Cog, name = '数値確認'):
             await send_message(ctx.send, ctx.author.mention, result, isembed=False)
         else:
             await self.send_err(ctx, res, result)
+        return 
 
 
 class __SQL(commands.Cog, name = 'SQL'):
