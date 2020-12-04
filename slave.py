@@ -96,27 +96,27 @@ def list2str(list_, delimiter):
 async def send_message(send_method, mention, mes, title = 'Result', delimiter = ['\n'], isembed = True):
     if (type(mes) is list):
         if (len(mes) == 0):
-            await send_method(f'{mention} 該当するデータがありません')
+            message = await send_method(f'{mention} 該当するデータがありません')
         elif (len(mes) == 1):
-            await send_method(f'{mention} ' + str(mes[0]))
+            message = await send_method(f'{mention} ' + str(mes[0]))
         else:
             reply = list2str(mes, delimiter)
             if (isembed):
                 try:
                     embed = discord.Embed(title=title, description=reply)
-                    await send_method(f'{mention} ', embed=embed)
+                    message = await send_method(f'{mention} ', embed=embed)
                 except:
-                    await send_method(f'{mention} エラー：該当するデータが多すぎます')
+                    message = await send_method(f'{mention} エラー：該当するデータが多すぎます')
             else:
-                await send_message(send_method, mention, '\n'+reply, title = title)
+                message = await send_message(send_method, mention, '\n'+reply, title = title)
     elif (type(mes) is str):
         if (len(mes) == 0):
-            await send_method(f'{mention} 該当するデータがありません')
+            message = await send_method(f'{mention} 該当するデータがありません')
         else:
-            await send_method(f'{mention} ' + str(mes))
+            message = await send_method(f'{mention} ' + str(mes))
     else:
         pass
-    return
+    return message
 
 class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
@@ -347,6 +347,8 @@ class __SQL(commands.Cog, name = 'SQL'):
             await send_message(ctx.send, ctx.author.mention, 'エラー：コマンドが登録されていません')
         if (errtype == -4):
             await send_message(ctx.send, ctx.author.mention, 'エラー：コマンドが見つかりません')
+        if (errtype == -5):
+            await send_message(ctx.send, ctx.author.mention, ':9mahogyaku:')
         return
 
     @commands.command()
@@ -370,7 +372,7 @@ class __SQL(commands.Cog, name = 'SQL'):
             if (len(text) == 0):
                 text = ''
             elif (len(text) == 1):
-                text = '・'+text[0][0]+'/n'+text[0][1]
+                text = '\n・'+text[0][0]+'\n'+text[0][1]
             else:
                 text[0][0] = '・' + text[0][0]
             await send_message(ctx.send, ctx.author.mention, text, title = '', delimiter = ['\n・', '：\n    '])
