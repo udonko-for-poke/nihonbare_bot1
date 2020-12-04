@@ -67,9 +67,14 @@ def addsql(arg, SQLCMD_PATH):
             sql_dict = pickle.load(f)
         
         cnt = 0
+        errflg = 0
         for c in cmds:
+            if (sql_dict[c]['SQL'].startswith('?')):
+                errflg = 1
+                break
             cnt += sql_dict[c]['argc']
-        
+        if (errflg):
+            return -5, None
         sql_dict[cmd] = {'SQL':text,'info':'', 'argc':cnt}
 
 
