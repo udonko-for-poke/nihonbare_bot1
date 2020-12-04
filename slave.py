@@ -306,7 +306,7 @@ class __Status(commands.Cog, name = '数値確認'):
         res, result = cmd_status.calciv(poke, lv, args)
         if (res == 1):
             print('checkiv->'+poke)
-            await send_message(ctx.send, ctx.author.mention, result, delimiter = [' - '], isembed = False)
+            await send_message(ctx.send, ctx.author.mention, result, delimiter = [' - ', '～'], isembed = False)
         else:
             await self.send_err(ctx, res, result)
         return
@@ -322,7 +322,6 @@ class __Status(commands.Cog, name = '数値確認'):
             await self.send_err(ctx, res, result)
         return
 
-    #XXX:新しいクラスにした方がいい?関数も新しいcmd fileを作ってもいいか?
     @commands.command()
     async def puzzle(self, ctx, *ivs):
         """個体値パズルの可否を判定"""
@@ -332,8 +331,12 @@ class __Status(commands.Cog, name = '数値確認'):
             await send_message(ctx.send, ctx.author.mention, result, isembed=False)
         else:
             await self.send_err(ctx, res, result)
+<<<<<<< HEAD
         return 
 
+=======
+        return
+>>>>>>> root_branch/main
 
 class __SQL(commands.Cog, name = 'SQL'):
     def __init__(self, bot):
@@ -356,7 +359,7 @@ class __SQL(commands.Cog, name = 'SQL'):
         """新規SQL文の登録"""
         res, cmd = cmd_sql.addsql(cmd_SQL, SQLCMD_PATH)
         if (res == 1):
-            await send_message(ctx.send, ctx.author.mention, '(コマンド「'+cmd+'」が登録されました')
+            await send_message(ctx.send, ctx.author.mention, 'コマンド「'+cmd+'」が登録されました')
             print('addcmd='+cmd)
         else:
             await self.make_err(ctx, res)
@@ -522,7 +525,7 @@ async def on_message(message):
     
     if(content.startswith('?')):
         with message.channel.typing():
-            res, result = cmd_sql.registered_sql(iter(content), SQLCMD_PATH)
+            res, result = cmd_sql.registered_sql(content, SQLCMD_PATH)
             if (res == 1):
                 await send_message(message.channel.send, message.author.mention, result, delimiter = ['\n', ','])
             else:

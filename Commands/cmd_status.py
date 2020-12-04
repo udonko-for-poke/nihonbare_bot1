@@ -126,7 +126,6 @@ def calciv(poke, lv, args):
             return 1, result
     return
 
-
 def ivpuzzle(ivs):
     try:
         _ivs = list(map(int, ivs))
@@ -184,4 +183,3 @@ def lang(keyword_lang):
         else:
             return -2, result
     return 1, result[0]
-
