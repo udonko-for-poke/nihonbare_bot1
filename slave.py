@@ -348,7 +348,7 @@ class __SQL(commands.Cog, name = 'SQL'):
         if (errtype == -4):
             await send_message(ctx.send, ctx.author.mention, 'エラー：コマンドが見つかりません')
         if (errtype == -5):
-            await send_message(ctx.send, ctx.author.mention, ':9mahogyaku:')
+            await send_message(ctx.send, ctx.author.mention, '<:9mahogyaku:766976884562198549>')
         return
 
     @commands.command()
