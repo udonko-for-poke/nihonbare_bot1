@@ -48,5 +48,8 @@ def calc(formula):
     m = re.findall(r'[^0-9\+\-\*\/\^\(\)\.]', form)
     if (len(m) > 0):
         return 0, m
-    form_tree = calcform(form)
+    try:
+        form_tree = calcform(form)
+    except ZeroDivisionError:
+        form_tree = '0で除算しました'
     return 1, form_tree
