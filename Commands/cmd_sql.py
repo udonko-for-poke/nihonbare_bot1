@@ -69,20 +69,21 @@ def addsql(arg, SQLCMD_PATH):
         cnt = 0
         errflg = 0
         for c in cmds:
+            if  (c not in sql_dict.keys()):
+                errflg = -3
+                break
             if (sql_dict[c]['SQL'].startswith('?')):
-                errflg = 1
+                errflg = -5
                 break
             cnt += sql_dict[c]['argc']
-        if (errflg):
-            return -5, None
+        if (errflg != 0):
+            return errflg, None
         sql_dict[cmd] = {'SQL':text,'info':'', 'argc':cnt}
 
 
     with open(SQLCMD_PATH, 'wb') as f:
         pickle.dump(sql_dict, f)
     return 1, cmd
-
-    
 
 def showsql(arg, SQLCMD_PATH):
     if os.path.getsize(SQLCMD_PATH) <= 0:
@@ -185,9 +186,17 @@ def registered_sql(mes, SQLCMD_PATH):
     
     argc = []
     cnt = 0
+    errflg = 0
     for cmd in cmds:
+        if (cmd not in sql_dict.keys()):
+            errflg  = 1
+            break
         argc.append(sql_dict[cmd]['argc'])
         cnt += sql_dict[cmd]['argc']
+
+    if (errflg):
+        return False, 'エラー：コマンド「'+cmd+'」が見つかりません'
+
     if (cnt != len(args)):
         return False, 'エラー：引数の数が間違っています'
 
@@ -230,7 +239,7 @@ def registered_sql(mes, SQLCMD_PATH):
     cnt = 0
     i = 0
     for cmd in cmds:
-        if (cmd in sql_dict):
+        if (cmd in sql_dict.keys()):
             #コマンドに対応する数の引数のリストを作成
             arglist = args[cnt:cnt+argc[i]]
             cnt += argc[i]
