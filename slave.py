@@ -252,6 +252,11 @@ class __Event(commands.Cog, name= 'イベント管理'):
     def have_authority(self, author, organizer):
         return (author.top_role.id == HOST_ROLE) or (str(author.id) == organizer)
 
+    def delete_event(self, num):
+        del self.event_status[num]
+        rw_csv.write_csv(EVENT_PATH, self.event_status)
+        return
+
     async def send_err(self, ctx, errtype):
         if(errtype >= 0):
             await send_message(ctx.send, ctx.author.mention, 'エラー:同名のイベントが既に登録されています')
@@ -264,7 +269,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
     async def plan(self, ctx, name, *detail):
         """イベントの企画"""
         overlapping = cmd_event.lookup_ev(name, self.event_status)
-        if(overlapping != -1):
+        if (overlapping != -1):
             await self.send_err(ctx, overlapping)
         else:
             txt = '\n'.join(detail)
@@ -280,21 +285,45 @@ class __Event(commands.Cog, name= 'イベント管理'):
     async def cancel(self, ctx, ev_name_id):
         """イベントのキャンセル"""
         exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
-        if(exists == -1):
+        if (exists == -1):
             await self.send_err(ctx, exists)
         else:
             target_ev = self.event_status[exists]
             if self.have_authority(ctx.author, target_ev[3]):
-                await send_message(ctx.send, ctx.author.mention, '%sを本当に削除しますか？\n削除 -> y\nこの動作は30秒後にキャンセルされます。')
+                await send_message(ctx.send, ctx.author.mention, '%sを本当に削除しますか？\n削除 -> \' y \'\n※この動作は30秒後にキャンセルされます。'%target_ev[1])
                 confirmation = await confirm(ctx.author)
-                if confirmation:
-                    del self.event_status[exists]
-                    rw_csv.write_csv(EVENT_PATH, self.event_status)
+                if (confirmation):
+                    self.delete_event(exists)
                     print('delete event\nev_name:%s\n'%target_ev[1])
                     await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
+                else:
+                    await send_message(ctx.send, ctx.author.mention, '削除をキャンセルしました')
             else:
-                await send_message(ctx.send, ctx.author.mention, 'イベントの削除をキャンセルしました')
+                await self.send_err(ctx, -2)
         return 
+
+    @commands.command()
+    async def start(self, ctx, ev_name_id):
+        """イベントの開始"""
+        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        if (exists == -1):
+            await self.send_err(ctx, exists)
+        else:
+            current_ev = self.event_status[exists]
+            if self.have_authority(ctx.author, current_ev[3]):
+                await send_message(ctx.send, ctx.author.mention, '参加者募集を締め切って%sを開始してもよろしいですか？\n開始 -> \' y \'\n※この動作は30秒後にキャンセルされます。'%current_ev[1])
+                confirmation = await confirm(ctx.author)
+                if (confirmation):
+                    channel = bot.get_channel(EVENT_CHANNEL)
+                    players = await cmd_event.get_players(int(current_ev[0]), channel)
+                    await send_message(channel.send, '', '%sを開始します。\n参加メンバー：\n'%current_ev[1] + '\n'.join(players))
+                    self.delete_event(exists)
+                    print('start event\nev_name:%s\nplayers\n'%current_ev[1] + '\n'.join(players))
+                else:
+                    await send_message(ctx.send, ctx.author.mention, 'イベントの開始をキャンセルしました')
+            else:
+                await self.send_err(ctx, -2)
+        return
 
 @bot.command()
 async def card(ctx, *pokes):
