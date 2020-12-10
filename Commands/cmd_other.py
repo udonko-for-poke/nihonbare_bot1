@@ -48,6 +48,10 @@ def calc(formula):
     m = re.findall(r'[^0-9\+\-\*\/\^\(\)\.]', form)
     if (len(m) > 0):
         return 0, m
+    
+    if (form.count('(') != form.count(')')):
+        return 1, '括弧の数が間違っています'
+
     try:
         form_tree = calcform(form)
     except ZeroDivisionError:
