@@ -541,13 +541,12 @@ async def on_message(message):
         return
 
     if(content.startswith('=')):
-        with message.channel.typing():
-            res, result = cmd_other.calc(content)
-            if (res == 1):
-                print('calc')
-                await send_message(message.channel.send, message.author.mention, result)
-            else:
-                await send_message(message.channel.send, message.author.mention, result, title = '不明な文字')
+        res, result = cmd_other.calc(content)
+        if (res == 1):
+            print('calc')
+            await send_message(message.channel.send, message.author.mention, result)
+        else:
+            await send_message(message.channel.send, message.author.mention, result, title = '不明な文字')
         return
     
     await bot.process_commands(message)
