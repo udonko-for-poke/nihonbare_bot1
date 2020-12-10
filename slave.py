@@ -10,6 +10,7 @@ import cmd_status
 import cmd_sql
 import cmd_home
 import cmd_system
+import cmd_other
 import vc
 
 SERVERID     = 696651369221718077       #鯖ID
@@ -77,6 +78,11 @@ async def on_command_error(ctx, error):
 #botが自分自身を区別するための関数
 is_me = lambda m: m.author == bot.user
 
+def listcontent(list_):
+    if (type(list_) is not list):
+        return list_
+    return listcontent(list_[0])
+
 def list2str(list_, delimiter):
     result = ''
     if (len(delimiter) == 0):
@@ -94,11 +100,14 @@ def list2str(list_, delimiter):
     return result[:-1*len(d)]
 
 async def send_message(send_method, mention, mes, title = 'Result', delimiter = ['\n'], isembed = True):
-    if (type(mes) is list):
+    message = None
+    mtype = type(mes)
+    if (mtype is list):
         if (len(mes) == 0):
             message = await send_method(f'{mention} 該当するデータがありません')
-        elif (len(mes) == 1):
-            message = await send_method(f'{mention} ' + str(mes[0]))
+        elif (len(mes) == 1 and mtype is not list):
+            message = await send_method(f'{mention} ' + listcontent(mes))
+            
         else:
             reply = list2str(mes, delimiter)
             if (isembed):
@@ -109,11 +118,13 @@ async def send_message(send_method, mention, mes, title = 'Result', delimiter = 
                     message = await send_method(f'{mention} エラー：該当するデータが多すぎます')
             else:
                 message = await send_message(send_method, mention, '\n'+reply, title = title)
-    elif (type(mes) is str):
+    elif (mtype is str):
         if (len(mes) == 0):
             message = await send_method(f'{mention} 該当するデータがありません')
         else:
-            message = await send_method(f'{mention} ' + str(mes))
+            message = await send_method(f'{mention} ' + mes)
+    elif (mtype is int or mtype is float):
+        message = await send_method(f'{mention} {mes}')
     else:
         pass
     return message
@@ -528,6 +539,17 @@ async def on_message(message):
             else:
                 await send_message(message.channel.send, message.author.mention, result)
         return
+
+    if(content.startswith('=')):
+        with message.channel.typing():
+            res, result = cmd_other.calc(content)
+            if (res == 1):
+                print('calc')
+                await send_message(message.channel.send, message.author.mention, result)
+            else:
+                await send_message(message.channel.send, message.author.mention, result, title = '不明な文字')
+        return
+    
     await bot.process_commands(message)
     return
 
