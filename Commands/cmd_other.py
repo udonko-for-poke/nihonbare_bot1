@@ -1,7 +1,6 @@
 import re
 
 def calcform(form):
-    print(form)
     if (len(form) == 0):
         return 0.0
     
@@ -46,7 +45,7 @@ def calc(formula):
     if (len(formula) <= 0):
         return 1, '不適切な数式です'
 
-    m = re.findall(r'[^0-9\+\-\*\/\^\(\)]', form)
+    m = re.findall(r'[^0-9\+\-\*\/\^\(\)\.]', form)
     if (len(m) > 0):
         return 0, m
     form_tree = calcform(form)
