@@ -15,6 +15,7 @@ import cmd_other
 import cmd_event
 import vc
 import rw_csv
+import userinfo
 
 SERVERID     = 696651369221718077       #鯖ID
 SLAVE_ID     = 723507961816678420       #役職：レイドの奴隷のID
@@ -338,9 +339,9 @@ class __Event(commands.Cog, name= 'イベント管理'):
                     channel = bot.get_channel(EVENT_CHANNEL)
                     players = await cmd_event.get_players(int(current_ev[0]), channel)
                     if (len(players) > 0):
-                        await send_message(channel.send, '', '%sを開始します。\n参加メンバー：\n'%current_ev[1] + '\n'.join(players))
+                        await send_message(channel.send, '', '%sを開始します。\n参加メンバー：\n'%current_ev[1] + '\n'.join(map(userinfo.get_mention, players)))
                         self.delete_event(exists)
-                        print('start event\nev_name:%s\nplayers\n'%current_ev[1] + '\n'.join(players))
+                        print('start event\nev_name:%s\nplayers\n'%current_ev[1] + '\n'.join(map(userinfo.get_username, players)))
                     else:
                         await send_message(ctx.send, ctx.author.mention, '参加者がいません')
                 else:
