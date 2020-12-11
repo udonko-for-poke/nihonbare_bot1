@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import sys
 import re
+import asyncio
 sys.path.append(os.path.join(os.path.dirname(__file__), 'Commands'))
 import cmd_raid
 import cmd_card
