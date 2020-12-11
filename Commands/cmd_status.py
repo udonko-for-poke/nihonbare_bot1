@@ -6,7 +6,7 @@ import re
 
 def lang_check(l):
     lang = l.lower()
-    Eng = ['英語', '英', '米', 'eng', 'english']
+    Eng = ['英語', '英', '米', 'eng', 'English']
     Chi = ['中国語', '中国', '中', 'chi', '	Chinese']
     Deu = ['ドイツ語', 'ドイツ', '独', 'deu', 'German']
     Kor = ['韓国語', '韓国', '韓', 'kor', 'Korean']
@@ -50,6 +50,13 @@ def st(arg1):
         poke = arg
     
     poke  = poke.replace('２', '2') #ポリゴン2の表記を統一
+
+    res, result = getSQL.getstatus('name', poke, isreal)
+    if (not res):
+        if (len(result) == 4):
+            return 1, result
+        else:
+            return 1, [list(result), []]
     poke  = jaconv.hira2kata(poke)  #平仮名をカタカナに
     #   数値を取得
     res, result = getSQL.getstatus('name', poke, isreal)
@@ -59,11 +66,11 @@ def st(arg1):
         else:
             return 1, [list(result), []]
     else:
-        result = getSQL.inname(poke)
-        if (len(result) <= 0 or len(result) >= 10):
+        result2 = getSQL.inname(poke)
+        if (len(result2) <= 0 or len(result2) >= 10):
             return -1, poke
         else:
-            return -2, result
+            return -2, result2[0]
     return
 
 def korippo(poke):
@@ -76,7 +83,7 @@ def korippo(poke):
         if (len(result) <= 0 or len(result) >= 10):
             return -1, poke
         else:
-            return -2, result
+            return -2, result[0]
 
     HP = int(result[0])
     cmd = 'select get from pokemon WHERE name = ?'
@@ -125,7 +132,6 @@ def calciv(poke, lv, args):
         else:
             return 1, result
     return
-
 
 def ivpuzzle(ivs):
     try:
@@ -182,6 +188,5 @@ def lang(keyword_lang):
         if (len(result) <= 0 or len(result) >= 10):
             return -1, poke
         else:
-            return -2, result
+            return -2, result[0]
     return 1, result[0]
-

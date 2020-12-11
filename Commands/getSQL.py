@@ -88,11 +88,15 @@ def sqlrequest(txt, tpl):
         return '', -1
     cnt = 0
     result = []
+    sub = []
     for element in list1:
-        result.append(str(element))
+        sub.append(str(element))
+    result.append(sub)
     for hit in c.fetchall():
+        sub = []
         for element in hit:
-            result.append(str(element))
+            sub.append(str(element))
+        result.append(sub)
 
     poke_content.commit()
     poke_content.close()
@@ -176,7 +180,6 @@ def getiv(poke, txt, lv, list_, check_h, rise=-1, down=-1):
         ivlist.append(makeiv(int(list1[i]), list_[i], int(lv), n,(i==check_h)))
     return ivlist
 
-
 def makeiv(base, r_st, lv, nature, is_H):
     """実数値から取り得る個体値を計算"""
     if is_H:
@@ -203,3 +206,4 @@ def rdown_sub(num):
         return (int(num) - 1)
     else:
         return int(num)
+
