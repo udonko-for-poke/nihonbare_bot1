@@ -11,7 +11,9 @@ import cmd_sql
 import cmd_home
 import cmd_system
 import cmd_other
+import cmd_event
 import vc
+import rw_csv
 
 SERVERID     = 696651369221718077       #鯖ID
 SLAVE_ID     = 723507961816678420       #役職：レイドの奴隷のID
@@ -24,12 +26,14 @@ MY_SERVER2   = 723833856871891004       #実験用鯖2
 HOST_ROLE    = 696655902438326292       #役職：HOSTのID
 vc_state     = 0                        #ボイスチャンネルにいる人の数を0で初期化
 NOT_MENTION  = [699547606728048700]     #通話が始まっても通知しないチャンネル
+EVENT_CHANNEL= 702878405556830219       #イベントの参加、開催を通知するチャンネル
 
-MAINPATH   = os.path.dirname(os.path.abspath(__file__)) #このファイルの位置
-TOKEN_PATH = '' + MAINPATH + '/Data/BotID.txt'          #TOKENが保存されているファイル
-STOCK_PATH = '' + MAINPATH + '/Data/Stock.txt'          #レイドの在庫が保存されているファイル
-IMG_PATH   = '' + MAINPATH + '/Commands/IMG/'           #画像が保存されているファイル
-SQLCMD_PATH = '' + MAINPATH + '/Data/cmdsql.pickle'     #登録済みのSQL文が保存されているファイル
+MAINPATH     = os.path.dirname(os.path.abspath(__file__)) #このファイルの位置
+TOKEN_PATH   = '' + MAINPATH + '/Data/BotID.txt'          #TOKENが保存されているファイル
+STOCK_PATH   = '' + MAINPATH + '/Data/Stock.txt'          #レイドの在庫が保存されているファイル
+IMG_PATH     = '' + MAINPATH + '/Commands/IMG/'           #画像が保存されているファイル
+SQLCMD_PATH  = '' + MAINPATH + '/Data/cmdsql.pickle'     #登録済みのSQL文が保存されているファイル
+EVENT_PATH   = '' + MAINPATH + '/Data/event_status.csv'   #イベントの情報が保存されているファイル
 
 #TOKENの読み込み
 with open(TOKEN_PATH, "r",encoding="utf-8_sig") as f:
@@ -128,6 +132,16 @@ async def send_message(send_method, mention, mes, title = 'Result', delimiter = 
     else:
         pass
     return message
+
+async def confirm(member):
+    def check_y(m):
+        return (m.content == 'y') and (m.author == member)
+    try:
+        await bot.wait_for('message', check=check_y, timeout=30.0)
+    except asyncio.TimeoutError:
+        return False
+    else:
+        return True
 
 class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
@@ -239,6 +253,112 @@ class __Raid(commands.Cog, name = 'レイド関連'):
             return
         return
 
+class __Event(commands.Cog, name= 'イベント管理'):
+    def __init__(self, bot):
+        super().__init__()
+        self.bot = bot
+        self.event_status = rw_csv.read_csv(EVENT_PATH)
+    
+    def have_authority(self, author, organizer):
+        return (author.top_role.id == HOST_ROLE) or (str(author.id) == organizer)
+
+    def delete_event(self, num):
+        del self.event_status[num]
+        rw_csv.write_csv(EVENT_PATH, self.event_status)
+        return
+
+    async def send_err(self, ctx, errtype):
+        if(errtype >= 0):
+            await send_message(ctx.send, ctx.author.mention, 'エラー:同名のイベントが既に登録されています')
+        if(errtype == -1):
+            await send_message(ctx.send, ctx.author.mention, 'エラー:イベントが見つかりません')
+        if(errtype == -2):
+            await send_message(ctx.send, ctx.author.mention, 'エラー:この動作はイベントの企画者かHOSTにのみ許可されています')
+
+    @commands.command()
+    async def plan(self, ctx, name, *detail):
+        """イベントの企画"""
+        overlapping = cmd_event.lookup_ev(name, self.event_status)
+        if (overlapping != -1):
+            await self.send_err(ctx, overlapping)
+        else:
+            txt = '\n'.join(detail)
+            embed = discord.Embed(title='[イベント告知] '+name, description=txt+'\n参加したい方はこの投稿にリアクションをつけてください。')
+            channel = bot.get_channel(EVENT_CHANNEL)
+            msg = await channel.send(embed=embed)
+            self.event_status.append([str(msg.id), name, txt, str(ctx.author.id)])
+            rw_csv.write_csv(EVENT_PATH, self.event_status)
+            print('plan event\nev_name:' +name+ '\nev_id:' +str(msg.id)+ '\n')
+        return
+
+    @commands.command()
+    async def cancel(self, ctx, ev_name_id):
+        """イベントのキャンセル"""
+        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        if (exists == -1):
+            await self.send_err(ctx, exists)
+        else:
+            target_ev = self.event_status[exists]
+            if self.have_authority(ctx.author, target_ev[3]):
+                await send_message(ctx.send, ctx.author.mention, '%sを本当に削除しますか？\n削除 -> \' y \'\n※この動作は30秒後にキャンセルされます。'%target_ev[1])
+                confirmation = await confirm(ctx.author)
+                if (confirmation):
+                    self.delete_event(exists)
+                    print('delete event\nev_name:%s\n'%target_ev[1])
+                    await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
+                else:
+                    await send_message(ctx.send, ctx.author.mention, '削除をキャンセルしました')
+            else:
+                await self.send_err(ctx, -2)
+        return 
+
+    @commands.command()
+    async def start(self, ctx, ev_name_id):
+        """イベントの開始"""
+        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        if (exists == -1):
+            await self.send_err(ctx, exists)
+        else:
+            current_ev = self.event_status[exists]
+            print(exists)
+            print(current_ev)
+            if self.have_authority(ctx.author, current_ev[3]):
+                await send_message(ctx.send, ctx.author.mention, '参加者募集を締め切って%sを開始してもよろしいですか？\n開始 -> \' y \'\n※この動作は30秒後にキャンセルされます。'%current_ev[1])
+                confirmation = await confirm(ctx.author)
+                if (confirmation):
+                    channel = bot.get_channel(EVENT_CHANNEL)
+                    players = await cmd_event.get_players(int(current_ev[0]), channel)
+                    if (len(players) > 0):
+                        await send_message(channel.send, '', '%sを開始します。\n参加メンバー：\n'%current_ev[1] + '\n'.join(players))
+                        self.delete_event(exists)
+                        print('start event\nev_name:%s\nplayers\n'%current_ev[1] + '\n'.join(players))
+                    else:
+                        await send_message(ctx.send, ctx.author.mention, '参加者がいません')
+                else:
+                    await send_message(ctx.send, ctx.author.mention, 'イベントの開始をキャンセルしました')
+            else:
+                await self.send_err(ctx, -2)
+
+    @commands.command()
+    async def cancel(self, ctx, ev_name_id):
+        """イベントのキャンセル"""
+        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        if(exists == -1):
+            await self.send_err(ctx, exists)
+        else:
+            target_ev = self.event_status[exists]
+            if self.have_authority(ctx.author, target_ev[3]):
+                await send_message(ctx.send, ctx.author.mention, f'{ev_name_id}を本当に削除しますか？\n削除 -> y\nこの動作は30秒後にキャンセルされます。')
+                confirmation = await confirm(ctx.author)
+                if confirmation:
+                    del self.event_status[exists]
+                    rw_csv.write_csv(EVENT_PATH, self.event_status)
+                    print('delete event\nev_name:%s\n'%target_ev[1])
+                    await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
+            else:
+                await send_message(ctx.send, ctx.author.mention, 'イベントの削除をキャンセルしました')
+        return
+
 @bot.command()
 async def card(ctx, *pokes):
     """簡易な構築の画像を生成"""
@@ -262,7 +382,7 @@ async def bkp(ctx):
         return
     global MAINPATH
     channel  = bot.get_channel(BKP_CHANNEL)
-    filelist = ['Stock.txt', 'cmdsql.pickle']
+    filelist = ['Stock.txt', 'cmdsql.pickle', 'event_status.csv']
     result = await cmd_system.bkp(channel.send, filelist, MAINPATH+'/Data')
     if (result):
         mes = 'バックアップを取りました'
@@ -582,4 +702,5 @@ bot.add_cog(__Raid(bot=bot))
 bot.add_cog(__Status(bot=bot))
 bot.add_cog(__SQL(bot=bot))
 bot.add_cog(__Home(bot=bot))
+bot.add_cog(__Event(bot=bot))
 bot.run(TOKEN)
