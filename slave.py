@@ -339,26 +339,6 @@ class __Event(commands.Cog, name= 'イベント管理'):
             else:
                 await self.send_err(ctx, -2)
 
-    @commands.command()
-    async def cancel(self, ctx, ev_name_id):
-        """イベントのキャンセル"""
-        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
-        if(exists == -1):
-            await self.send_err(ctx, exists)
-        else:
-            target_ev = self.event_status[exists]
-            if self.have_authority(ctx.author, target_ev[3]):
-                await send_message(ctx.send, ctx.author.mention, f'{ev_name_id}を本当に削除しますか？\n削除 -> y\nこの動作は30秒後にキャンセルされます。')
-                confirmation = await confirm(ctx.author)
-                if confirmation:
-                    del self.event_status[exists]
-                    rw_csv.write_csv(EVENT_PATH, self.event_status)
-                    print('delete event\nev_name:%s\n'%target_ev[1])
-                    await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
-            else:
-                await send_message(ctx.send, ctx.author.mention, 'イベントの削除をキャンセルしました')
-        return
-
 @bot.command()
 async def card(ctx, *pokes):
     """簡易な構築の画像を生成"""
@@ -678,7 +658,8 @@ async def on_raw_reaction_add(payload):
     if (payload.emoji.name == '8jyomei'):
         channel = bot.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if (is_me(message)):
+        exists = cmd_event.lookup_ev(str(payload.message_id), __Event(bot=bot).event_status)
+        if (is_me(message) and exists == -1):
             await message.delete()
             print(payload.member.name + ' has deleted bot comment')
         
