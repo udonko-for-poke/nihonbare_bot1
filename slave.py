@@ -442,12 +442,7 @@ class __Status(commands.Cog, name = '数値確認'):
             await send_message(ctx.send, ctx.author.mention, result, isembed=False)
         else:
             await self.send_err(ctx, res, result)
-<<<<<<< HEAD
-        return 
-
-=======
         return
->>>>>>> root_branch/main
 
 class __SQL(commands.Cog, name = 'SQL'):
     def __init__(self, bot):
