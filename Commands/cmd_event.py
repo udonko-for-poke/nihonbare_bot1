@@ -11,5 +11,5 @@ async def get_players(event_id, channel):
     players = set()
     for reaction in reactions:
         async for user in reaction.users():
-            players.add(user.name)
-    return list(players)
+            players.add(user)
+    return players
