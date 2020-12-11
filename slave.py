@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import sys
 import re
+import asyncio
 sys.path.append(os.path.join(os.path.dirname(__file__), 'Commands'))
 import cmd_raid
 import cmd_card
@@ -142,6 +143,13 @@ async def confirm(member):
         return False
     else:
         return True
+
+async def del_message(_channel, mes_id):
+    channel = bot.get_channel(_channel)
+    message = await channel.fetch_message(mes_id)
+    if is_me(message):
+        await message.delete()
+    return
 
 class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
@@ -292,9 +300,9 @@ class __Event(commands.Cog, name= 'イベント管理'):
         return
 
     @commands.command()
-    async def cancel(self, ctx, ev_name_id):
+    async def cancel(self, ctx, ev_name):
         """イベントのキャンセル"""
-        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        exists = cmd_event.lookup_ev(ev_name, self.event_status)
         if (exists == -1):
             await self.send_err(ctx, exists)
         else:
@@ -304,6 +312,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
                 confirmation = await confirm(ctx.author)
                 if (confirmation):
                     self.delete_event(exists)
+                    await del_message(EVENT_CHANNEL, int(target_ev[0]))
                     print('delete event\nev_name:%s\n'%target_ev[1])
                     await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
                 else:
@@ -313,9 +322,9 @@ class __Event(commands.Cog, name= 'イベント管理'):
         return 
 
     @commands.command()
-    async def start(self, ctx, ev_name_id):
+    async def start(self, ctx, ev_name):
         """イベントの開始"""
-        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        exists = cmd_event.lookup_ev(ev_name, self.event_status)
         if (exists == -1):
             await self.send_err(ctx, exists)
         else:
@@ -658,7 +667,7 @@ async def on_raw_reaction_add(payload):
     if (payload.emoji.name == '8jyomei'):
         channel = bot.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        exists = cmd_event.lookup_ev(str(payload.message_id), __Event(bot=bot).event_status)
+        exists = cmd_event.lookup_ev2(str(payload.message_id), __Event(bot=bot).event_status)
         if (is_me(message) and exists == -1):
             await message.delete()
             print(payload.member.name + ' has deleted bot comment')
