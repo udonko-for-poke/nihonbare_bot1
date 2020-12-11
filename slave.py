@@ -146,9 +146,12 @@ async def confirm(member):
 
 async def del_message(_channel, mes_id):
     channel = bot.get_channel(_channel)
-    message = await channel.fetch_message(mes_id)
-    if is_me(message):
-        await message.delete()
+    try:
+        message = await channel.fetch_message(mes_id)
+        if is_me(message):
+            await message.delete()
+    except:
+        pass
     return
 
 class __Roles(commands.Cog, name = '役職の管理'):
