@@ -1,6 +1,13 @@
-def lookup_ev(id_name, _list):
+def lookup_ev(ev_name, _list):
     for i, x in enumerate(_list):
-        if id_name in x:
+        if (len(x) > 0 and ev_name == x[1]):
+            return i
+    else:
+        return -1
+
+def lookup_ev2(mes_id, _list):
+    for i, x in enumerate(_list):
+        if (len(x) > 0 and mes_id == x[0]):
             return i
     else:
         return -1
