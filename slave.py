@@ -144,6 +144,13 @@ async def confirm(member):
     else:
         return True
 
+async def del_message(_channel, mes_id):
+    channel = bot.get_channel(_channel)
+    message = await channel.fetch_message(mes_id)
+    if is_me(message):
+        await message.delete()
+    return
+
 class __Roles(commands.Cog, name = '役職の管理'):
     def __init__(self, bot):
         super().__init__()
@@ -293,9 +300,9 @@ class __Event(commands.Cog, name= 'イベント管理'):
         return
 
     @commands.command()
-    async def cancel(self, ctx, ev_name_id):
+    async def cancel(self, ctx, ev_name):
         """イベントのキャンセル"""
-        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        exists = cmd_event.lookup_ev(ev_name, self.event_status)
         if (exists == -1):
             await self.send_err(ctx, exists)
         else:
@@ -305,6 +312,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
                 confirmation = await confirm(ctx.author)
                 if (confirmation):
                     self.delete_event(exists)
+                    await del_message(EVENT_CHANNEL, int(target_ev[0]))
                     print('delete event\nev_name:%s\n'%target_ev[1])
                     await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
                 else:
@@ -314,9 +322,9 @@ class __Event(commands.Cog, name= 'イベント管理'):
         return 
 
     @commands.command()
-    async def start(self, ctx, ev_name_id):
+    async def start(self, ctx, ev_name):
         """イベントの開始"""
-        exists = cmd_event.lookup_ev(ev_name_id, self.event_status)
+        exists = cmd_event.lookup_ev(ev_name, self.event_status)
         if (exists == -1):
             await self.send_err(ctx, exists)
         else:
