@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import asyncio
+import configparser
 sys.path.append(os.path.join(os.path.dirname(__file__), 'Commands'))
 import cmd_raid
 import cmd_card
@@ -17,25 +18,25 @@ import vc
 import rw_csv
 import userinfo
 
-SERVERID     = 696651369221718077       #鯖ID
-SLAVE_ID     = 723507961816678420       #役職：レイドの奴隷のID
-CALL_ID      = 753655891114590348       #役職：通話通知のID
-CALL_CHANNEL = 753655481322569808       #通話通知を飛ばすチャンネルのID
-FOR_BOT      = 765392422829162556       #SQL文の実行を許可するチャンネル
-BKP_CHANNEL  = 782065499696922634       #バックアップを送るチャンネル
-MY_SERVER    = 539750441479831573       #実験用鯖1
-MY_SERVER2   = 723833856871891004       #実験用鯖2
-HOST_ROLE    = 696655902438326292       #役職：HOSTのID
-vc_state     = 0                        #ボイスチャンネルにいる人の数を0で初期化
-NOT_MENTION  = [699547606728048700]     #通話が始まっても通知しないチャンネル
-EVENT_CHANNEL= 702878405556830219       #イベントの参加、開催を通知するチャンネル
-
 MAINPATH     = os.path.dirname(os.path.abspath(__file__)) #このファイルの位置
-TOKEN_PATH   = '' + MAINPATH + '/Data/BotID.txt'          #TOKENが保存されているファイル
-STOCK_PATH   = '' + MAINPATH + '/Data/Stock.txt'          #レイドの在庫が保存されているファイル
-IMG_PATH     = '' + MAINPATH + '/Commands/IMG/'           #画像が保存されているファイル
-SQLCMD_PATH  = '' + MAINPATH + '/Data/cmdsql.pickle'     #登録済みのSQL文が保存されているファイル
-EVENT_PATH   = '' + MAINPATH + '/Data/event_status.csv'   #イベントの情報が保存されているファイル
+CONFIG_PATH  = '' + MAINPATH + '/Data/config.ini'
+
+config = configparser.ConfigParser()
+if not os.path.exists(CONFIG_PATH):
+    raise FileNotFoundError
+config.read(CONFIG_PATH, encoding='utf-8')
+channel_id = config.items('CHANNEL')
+role_id    = config.items('ROLE')
+
+def get_path(name):
+    return MAINPATH + config.get('DIR', name)
+
+vc_state     = 0                        #ボイスチャンネルにいる人の数を0で初期化
+TOKEN_PATH   = get_path('token')
+STOCK_PATH   = get_path('stock')
+IMG_PATH     = get_path('img')
+SQLCMD_PATH  = get_path('sql_cmd')
+EVENT_PATH   = get_path('event')
 
 #TOKENの読み込み
 with open(TOKEN_PATH, "r",encoding="utf-8_sig") as f:
@@ -161,12 +162,8 @@ class __Roles(commands.Cog, name = '役職の管理'):
         self.bot = bot
 
     def select_roll(self, role):
-        global SERVERID
-        global CALL_ID
-        if (role == 'slave'):
-            return SLAVE_ID
-        if (role == 'call'):
-            return CALL_ID
+        if role == 'slave' or role == 'call':
+            return int(channel_id[role])
         return None
         
     def exist_role(self, ctx, role):
@@ -218,7 +215,6 @@ class __Raid(commands.Cog, name = 'レイド関連'):
     async def check(self, ctx, poke):
         """レイドが開催済みかどうかを検索"""
         print('check:' + poke)
-        global STOCK_PATH
         res = cmd_raid.process_raid_check(poke, STOCK_PATH)
         if (res[0] == 1):
             await send_message(ctx.send, ctx.author.mention, str(poke) + 'レイドのデータはありません')
@@ -230,7 +226,6 @@ class __Raid(commands.Cog, name = 'レイド関連'):
     async def store(self, ctx, poke):
         """開催済みレイドの追加"""
         print('add:' + poke)
-        global l_poke
         res = cmd_raid.process_raid_add(poke, STOCK_PATH)
         if (res[0] == 1):
             await send_message(ctx.send, ctx.author.mention, str(poke) + 'レイドを登録しました')
@@ -241,9 +236,6 @@ class __Raid(commands.Cog, name = 'レイド関連'):
     @commands.command()
     async def raid(self, ctx, cmd, poke):
         """レイド関連のコマンド：add->store, check, del:削除（HOSTのみ使用可)"""
-        global l_poke
-        global HOST_ROLE
-        global STOCK_PATH
         if (cmd == 'add'):
             self.store(ctx, poke)
             return
@@ -251,11 +243,11 @@ class __Raid(commands.Cog, name = 'レイド関連'):
             self.check(ctx, poke)
             return
         if (cmd == 'del'):
-            if (ctx.message.author.top_role.id != HOST_ROLE):
+            if (ctx.message.author.top_role.id != int(role_id['host'])):
                 await send_message(ctx.send, ctx.author.mention, '権限が足りません')
                 return
             print('del:' + poke)
-            res = cmd_raid.process_raid_del(poke, HOST_ROLE, STOCK_PATH)
+            res = cmd_raid.process_raid_del(poke, int(role_id['host']), STOCK_PATH)
             if (res[0] == 1):
                 await send_message(ctx.send, ctx.author.mention, '\n' + str(poke) + 'レイドを削除しました')
             elif (res[0] == 0):
@@ -272,7 +264,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
         self.event_status = rw_csv.read_csv(EVENT_PATH)
     
     def have_authority(self, author, organizer):
-        return (author.top_role.id == HOST_ROLE) or (str(author.id) == organizer)
+        return (author.top_role.id == int(role_id['host'])) or (str(author.id) == organizer)
 
     def delete_event(self, num):
         del self.event_status[num]
@@ -296,7 +288,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
         else:
             txt = '\n'.join(detail)
             embed = discord.Embed(title='[イベント告知] '+name, description=txt+'\n参加したい方はこの投稿にリアクションをつけてください。')
-            channel = bot.get_channel(EVENT_CHANNEL)
+            channel = bot.get_channel(int(channel_id['event']))
             msg = await channel.send(embed=embed)
             self.event_status.append([str(msg.id), name, txt, str(ctx.author.id)])
             rw_csv.write_csv(EVENT_PATH, self.event_status)
@@ -316,7 +308,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
                 confirmation = await confirm(ctx.author)
                 if (confirmation):
                     self.delete_event(exists)
-                    await del_message(EVENT_CHANNEL, int(target_ev[0]))
+                    await del_message(int(channel_id['event']), int(target_ev[0]))
                     print('delete event\nev_name:%s\n'%target_ev[1])
                     await send_message(ctx.send, ctx.author.mention, target_ev[1] + 'を削除しました')
                 else:
@@ -339,7 +331,7 @@ class __Event(commands.Cog, name= 'イベント管理'):
                 await send_message(ctx.send, ctx.author.mention, '参加者募集を締め切って%sを開始してもよろしいですか？\n開始 -> \' y \'\n※この動作は30秒後にキャンセルされます。'%current_ev[1])
                 confirmation = await confirm(ctx.author)
                 if (confirmation):
-                    channel = bot.get_channel(EVENT_CHANNEL)
+                    channel = bot.get_channel(int(channel_id['event']))
                     players = await cmd_event.get_players(int(current_ev[0]), channel)
                     if (len(players) > 0):
                         await send_message(channel.send, '', '%sを開始します。\n参加メンバー：\n'%current_ev[1] + '\n'.join(map(userinfo.get_mention, players)))
@@ -370,11 +362,11 @@ async def card(ctx, *pokes):
 @bot.command()
 async def bkp(ctx):
     """botのデータのバックアップを取る"""
-    if (ctx.message.author.top_role.id != HOST_ROLE):
+    if (ctx.message.author.top_role.id != int(role_id['host'])):
         await send_message(ctx.send, ctx.author.mention, '権限が足りません')
         return
     global MAINPATH
-    channel  = bot.get_channel(BKP_CHANNEL)
+    channel  = bot.get_channel(int(channel_id['bkp']))
     filelist = ['Stock.txt', 'cmdsql.pickle', 'event_status.csv']
     result = await cmd_system.bkp(channel.send, filelist, MAINPATH+'/Data')
     if (result):
@@ -629,7 +621,7 @@ async def on_message(message):
     content = message.content
     head = content[:11].lower()
     if head == '!sql select':
-        if (message.channel.id != FOR_BOT and message.channel.guild.id != MY_SERVER and message.channel.guild.id != MY_SERVER2):
+        if (message.channel.id != int(channel_id['sql']) and message.channel.guild.id != int(channel_id['myserver1']) and message.channel.guild.id != int(channel_id['myserver2'])):
             return
         with message.channel.typing():
             res, result = cmd_sql.playsql(iter(content))
@@ -682,13 +674,12 @@ async def on_raw_reaction_add(payload):
 @bot.event
 async def on_voice_state_update(member, before, after):
     global vc_state
-    global NOT_MENTION
-    result = await vc.move_member(member, before, after, SERVERID, NOT_MENTION)
+    result = await vc.move_member(member, before, after, config.get('default', 'server'), int(channel_id['afk']))
     vc_state += result[0]
     if (result[1] == 1 and vc_state == 1):
         print('通話開始')
-        channel = bot.get_channel(CALL_CHANNEL)
-        role = bot.get_guild(SERVERID ).get_role(CALL_ID)
+        channel = bot.get_channel(int(channel_id['call']))
+        role = bot.get_guild(config.get('default', 'server')).get_role(int(channel_id['call']))
         await channel.send(f'{role.mention} 通話が始まりました')
         
 bot.add_cog(__Roles(bot=bot))
