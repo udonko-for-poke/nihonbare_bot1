@@ -25,8 +25,8 @@ config = configparser.ConfigParser()
 if not os.path.exists(CONFIG_PATH):
     raise FileNotFoundError
 config.read(CONFIG_PATH, encoding='utf-8')
-channel_id = config.items('CHANNEL')
-role_id    = config.items('ROLE')
+channel_id = dict(config.items('CHANNEL'))
+role_id    = dict(config.items('ROLE'))
 
 def get_path(name):
     return MAINPATH + config.get('DIR', name)
