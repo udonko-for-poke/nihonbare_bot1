@@ -163,7 +163,7 @@ class __Roles(commands.Cog, name = '役職の管理'):
 
     def select_roll(self, role):
         if role == 'slave' or role == 'call':
-            return int(channel_id[role])
+            return int(role_id[role])
         return None
         
     def exist_role(self, ctx, role):
